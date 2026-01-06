@@ -129,7 +129,7 @@ st.write("")
 # CSV LOADER FUNCTION (DEPLOYMENT SAFE)
 @st.cache_data
 def load_data():
-    return pd.read_csv("fact_consolidated.csv")
+    return pd.read_csv("data/fact_consolidated.csv")
 
 
 # CENTERED SMALL PLOT FUNCTION
