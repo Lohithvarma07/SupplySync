@@ -222,7 +222,6 @@ if df is not None:
 )
 
     st.data_editor(
-    df.head(20),
     use_container_width=True,
     disabled=True
 )
