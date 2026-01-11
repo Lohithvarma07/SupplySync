@@ -21,8 +21,6 @@ st.markdown(
 )
 
 
-
-
 st.markdown(
     """
     <style>
@@ -122,7 +120,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.write("")  
 
 # MYSQL LOADER FUNCTION
 @st.cache_data
@@ -235,9 +232,8 @@ if df is not None:
     st.info(f"**Shape:** {df.shape[0]} rows × {df.shape[1]} columns")
 else:
     st.info("Click the button above to load the dataset.")
-    
 # ============================================================
-# STEP 2 – DATA PRE-PROCESSING (Data Quality & Readiness)
+# STEP 2 – DATA PRE-PROCESSING (USER-CONTROLLED PIPELINE)
 # ============================================================
 
 st.markdown("""
@@ -279,21 +275,38 @@ This step guarantees that downstream models are trained on
 </div>
 """, unsafe_allow_html=True)
 
-# Ensure df exists
-if df is None:
+# Safety check
+if st.session_state.df is None:
     st.warning("⚠ Load data first.")
     st.stop()
 
-processed_df = df.copy()
-logs = []
+df = st.session_state.df
+
+# ------------------------------------------------------------
+# STEP SELECTOR (SEQUENTIAL CONTROL)
+# ------------------------------------------------------------
+
+step = st.radio(
+    "Select a Data Pre-Processing Step",
+    [
+        "Remove Duplicate Rows",
+        "Remove Rows with NULL Values",
+        "Replace NULL Values with 'Unknown'",
+        "Convert Columns to Numeric (Safe Columns Only)"
+    ],
+    index=None,
+    horizontal=True
+)
 
 # ============================================================
 # 1️⃣ REMOVE DUPLICATE ROWS
 # ============================================================
 
-remove_duplicates = st.checkbox("Remove Duplicate Rows")
+if step == "Remove Duplicate Rows":
 
-st.markdown("""
+    st.markdown("### Remove Duplicate Rows")
+
+    st.markdown("""
 <div style="
     background-color:#2F75B5;
     padding:28px;
@@ -327,18 +340,30 @@ leading to <b>over-forecasting</b>.
 </div>
 """, unsafe_allow_html=True)
 
-if remove_duplicates:
-    before = processed_df.shape[0]
-    processed_df = processed_df.drop_duplicates()
-    logs.append(f"✔ Removed **{before - processed_df.shape[0]} duplicate rows**")
+    dup_mask = df.duplicated()
+    dup_rows = df[dup_mask]
+
+    if st.button("Apply Duplicate Removal"):
+        df_updated = df.drop_duplicates()
+        st.session_state.df = df_updated
+
+        st.success("✔ Duplicate rows removed")
+
+        if not dup_rows.empty:
+            st.markdown("#### Removed Duplicate Rows")
+            st.dataframe(dup_rows, use_container_width=True)
+        else:
+            st.info("No duplicate rows found.")
 
 # ============================================================
 # 2️⃣ REMOVE ROWS WITH NULL VALUES
 # ============================================================
 
-remove_nulls = st.checkbox("Remove Rows with NULL Values")
+elif step == "Remove Rows with NULL Values":
 
-st.markdown(
+    st.markdown("### Remove Rows with NULL Values")
+
+    st.markdown(
     """
     <div style="
         background-color:#2F75B5;
@@ -378,18 +403,30 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-if remove_nulls:
-    before = processed_df.shape[0]
-    processed_df = processed_df.dropna()
-    logs.append(f"✔ Removed **{before - processed_df.shape[0]} rows with NULL values**")
+    null_mask = df.isnull().any(axis=1)
+    null_rows = df[null_mask]
+
+    if st.button("Apply NULL Row Removal"):
+        df_updated = df.dropna()
+        st.session_state.df = df_updated
+
+        st.success("✔ Rows with NULL values removed")
+
+        if not null_rows.empty:
+            st.markdown("#### Removed Rows with NULL Values")
+            st.dataframe(null_rows, use_container_width=True)
+        else:
+            st.info("No rows with NULL values found.")
 
 # ============================================================
 # 3️⃣ REPLACE NULL VALUES WITH "UNKNOWN"
 # ============================================================
 
-replace_nulls = st.checkbox("Replace NULL Values with 'Unknown'")
+elif step == "Replace NULL Values with 'Unknown'":
 
-st.markdown(
+    st.markdown("### Replace NULL Values with 'Unknown'")
+
+    st.markdown(
     """
     <div style="
         background-color:#2F75B5;
@@ -435,18 +472,33 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-if replace_nulls:
-    processed_df = processed_df.fillna("Unknown")
-    logs.append("✔ Replaced NULL values with 'Unknown'")
+
+    null_cells = df.isnull()
+
+    if st.button("Apply NULL Replacement"):
+        df_updated = df.fillna("Unknown")
+        st.session_state.df = df_updated
+
+        st.success("✔ NULL values replaced with 'Unknown'")
+
+        if null_cells.any().any():
+            st.markdown("#### Columns Where NULL Values Were Replaced")
+            st.dataframe(
+                null_cells.sum().to_frame("NULL Count"),
+                use_container_width=True
+            )
+        else:
+            st.info("No NULL values found to replace.")
 
 # ============================================================
-# 4️⃣ CONVERT COLUMNS TO NUMERIC (SAFE COLUMNS ONLY)
+# 4️⃣ CONVERT COLUMNS TO NUMERIC (SAFE ONLY)
 # ============================================================
 
-convert_numeric = st.checkbox("Convert Columns to Numeric (Safe Columns Only)")
+elif step == "Convert Columns to Numeric (Safe Columns Only)":
 
+    st.markdown("### Convert Columns to Numeric")
 
-st.markdown(
+    st.markdown(
     """
     <div style="
         background-color:#2F75B5;
@@ -507,45 +559,162 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-if convert_numeric:
+
     exclude = [
-        "transaction_id","product_id","store_id","customer_id",
-        "sales_channel_id","promo_id","event_id"
+        "transaction_id", "product_id", "store_id", "customer_id",
+        "sales_channel_id", "promo_id", "event_id"
     ]
-    safe_cols = [c for c in processed_df.columns if c not in exclude]
 
-    converted = 0
-    for col in safe_cols:
-        before = processed_df[col].dtype
-        processed_df[col] = pd.to_numeric(processed_df[col], errors="ignore")
-        if processed_df[col].dtype != before:
-            converted += 1
+    candidate_cols = [
+        c for c in df.columns
+        if c not in exclude and df[c].dtype == "object"
+    ]
 
-    logs.append(f"✔ Converted **{converted} columns** to numeric")
+    converted_cols = []
 
-st.session_state.df = processed_df
+    if st.button("Apply Numeric Conversion"):
+        df_updated = df.copy()
 
-st.success("### ✅ Pre-Processing Status")
+        for col in candidate_cols:
+            before = df_updated[col].dtype
+            df_updated[col] = pd.to_numeric(df_updated[col], errors="ignore")
+            if df_updated[col].dtype != before:
+                converted_cols.append(col)
 
-if remove_duplicates:
-    st.markdown("✔ **Duplicate rows removed**")
-else:
-    st.markdown("⚠ **Duplicate rows removal not applied**")
+        st.session_state.df = df_updated
 
-if remove_nulls:
-    st.markdown("✔ **Rows with NULL values removed**")
-else:
-    st.markdown("⚠ **Rows with NULL values removal not applied**")
+        st.success("✔ Numeric conversion applied")
 
-if replace_nulls:
-    st.markdown("✔ **NULL values replaced with 'Unknown'**")
-else:
-    st.markdown("⚠ **NULL values replacement not applied**")
+        if converted_cols:
+            st.markdown("#### Converted Columns")
+            st.write(converted_cols)
+        else:
+            st.info("No columns were converted.")
+st.markdown("""
+<style>
 
-if convert_numeric:
-    st.markdown("✔ **Numeric conversion applied (safe columns only)**")
-else:
-    st.markdown("⚠ **Numeric conversion not applied**")
+/* =====================================================
+   GLOBAL / COMMON STYLES
+   ===================================================== */
+
+/* Clean report-style table (used across EDA) */
+.clean-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+}
+
+.clean-table th {
+    background-color: #F4F6F7;
+    padding: 8px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 1px solid #D6DBDF;
+    color: #34495E;
+}
+
+.clean-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid #ECF0F1;
+    color: #2C3E50;
+}
+
+.clean-table tr:hover {
+    background-color: #F8F9F9;
+}
+
+
+/* =====================================================
+   EDA RADIO NAVIGATION (optional but safe)
+   ===================================================== */
+
+div[data-baseweb="radio-group"] {
+    background-color: #F8F9F9;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid #E5E7E9;
+    margin-bottom: 18px;
+}
+
+div[data-baseweb="radio"] {
+    margin-right: 14px;
+}
+
+div[data-baseweb="radio"] input:checked + div {
+    font-weight: 600;
+    color: #2F75B5;
+}
+
+
+/* =====================================================
+   DATA QUALITY – LAYOUT
+   ===================================================== */
+
+/* Horizontal row for 3 cards */
+.quality-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+/* Individual card */
+.quality-card {
+    flex: 1;
+    background-color: #FFFFFF;
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0px 2px 8px rgba(0,0,0,0.06);
+    border-left: 5px solid #2F75B5;
+}
+
+/* Card title */
+.quality-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #2C3E50;
+}
+
+/* Scrollable content inside card */
+.table-scroll {
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+
+/* =====================================================
+   REPORT / CARD STYLE (used for future EDA sections)
+   ===================================================== */
+
+.report-card {
+    background-color: #FFFFFF;
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-bottom: 22px;
+    box-shadow: 0px 2px 8px rgba(0,0,0,0.06);
+    border-left: 6px solid #2F75B5;
+}
+
+.report-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #2C3E50;
+}
+
+.metric-pill {
+    display: inline-block;
+    background-color: #EBF5FB;
+    color: #1F618D;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-right: 8px;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 
 # ============================================================
@@ -558,13 +727,58 @@ if df is None:
     st.warning("⚠ No dataset loaded. Please load data first.")
     st.stop()
 
-import pandas as pd
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
+# ---------------- EDA HEADER ----------------
+st.markdown(
+    """
+    <div style="
+        background-color:#0B2C5D;
+        padding:18px 25px;
+        border-radius:10px;
+        color:white;
+        margin-top:20px;
+        margin-bottom:10px;
+    ">
+        <h3 style="margin:0;">Exploratory Data Analysis (EDA)</h3>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-st.markdown("## 📊 Step 3 — Exploratory Data Analysis (EDA)")
 st.info(f"Dataset Loaded: **{df.shape[0]} rows × {df.shape[1]} columns**")
+
+# ---------------- EDA INTRO CARD ----------------
+st.markdown(
+    """
+    <div style="
+        background-color:#2F75B5;
+        padding:28px;
+        border-radius:12px;
+        color:white;
+        font-size:16px;
+        line-height:1.6;
+        margin-bottom:20px;
+    ">
+
+    <b>Exploratory Data Analysis (EDA)</b><br><br>
+
+    Provides <b>high-level insights</b> to understand data behavior before model engineering.<br><br>
+
+    <b>Key Insights Generated:</b>
+    <ul>
+        <li>Sales and demand patterns over time</li>
+        <li>Customer purchase behavior and loyalty trends</li>
+        <li>Product category and brand performance</li>
+        <li>Store and regional sales distribution</li>
+        <li>Promotion and event effectiveness</li>
+        <li>Weather and trend influence on demand</li>
+    </ul>
+
+    This section focuses on <b>interpretability</b>, not deep statistical modeling.
+
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # ============================================================
 # COLUMN MAPPING (SAFE & SIMPLE)
@@ -589,96 +803,694 @@ col_promo   = map_col(["promo_id"])
 num_df = df.select_dtypes(include=np.number)
 
 # ============================================================
-# 1. DATA QUALITY OVERVIEW
+# EDA NAVIGATION
 # ============================================================
 
-with st.expander("1. Data Quality Overview"):
+eda_option = st.radio(
+    "Select Analysis",
+    [
+        "Data Quality Overview",
+        "Sales Overview",
+        "Product-Level Analysis",
+        "Store-Level Analysis",
+        "Sales Channel Analysis",
+        "Promotion Effectiveness",
+        "Event Impact Analysis",
+        "Top Correlated Features",
+        "Summary Report"
+    ],
+    index=None,
+    horizontal=True
+)
 
-    st.subheader("Dataset Shape")
-    st.write(f"Rows: **{df.shape[0]}**, Columns: **{df.shape[1]}**")
-
-    st.subheader("Missing Value Analysis (%)")
-    mv = (df.isnull().mean() * 100).sort_values(ascending=False)
-    st.dataframe(mv.to_frame("missing_%"))
-
-    st.subheader("Duplicate Analysis")
-    st.write(f"Total duplicate rows: **{df.duplicated().sum()}**")
-
-    st.subheader("Data Types Summary")
-    st.dataframe(df.dtypes.value_counts().to_frame("count"))
+if eda_option is None:
+    st.info("👆 Please select an analysis above to view insights.")
+    st.stop()
 
 # ============================================================
-# 2. SALES METRICS OVERVIEW (NO PLOTS)
+# EDA ROUTER (⚠️ DO NOT BREAK THIS STRUCTURE)
 # ============================================================
 
-with st.expander("2. Sales Overview"):
+if eda_option == "Data Quality Overview":
+
+    st.markdown(
+        """
+        <div style="
+            background-color:#2F75B5;
+            padding:28px;
+            border-radius:12px;
+            color:white;
+            font-size:16px;
+            line-height:1.6;
+            margin-bottom:20px;
+        ">
+
+        <b>What this section does:</b>
+
+        This section provides a <b>high-level health check</b> of the dataset before any modeling or forecasting is attempted.
+
+        It evaluates:
+        <ul>
+            <li>Missing values</li>
+            <li>Duplicate records</li>
+            <li>Data type consistency</li>
+            <li>Overall row and column completeness</li>
+        </ul>
+
+        <b>Why this matters:</b>
+
+        Demand forecasting models are highly sensitive to <b>poor data quality</b>.
+        Even small inconsistencies (missing prices, invalid quantities, duplicate transactions)
+        can significantly distort predictions.<br>
+
+        <b>Key insights users get:</b>
+        <ul>
+            <li>Whether the dataset is <b>model-ready</b></li>
+            <li>Which columns require cleaning or transformation</li>
+            <li>Confidence in the reliability of downstream analysis</li>
+        </ul>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # =========================
+    # PREPARE DATA
+    # =========================
+    rows_count = df.shape[0]
+    cols_count = df.shape[1]
+
+    dup_count = df.duplicated().sum()
+    dtype_counts = df.dtypes.value_counts()
+
+    mv = (df.isnull().mean() * 100).round(2).sort_values(ascending=False)
+
+    # =========================
+    # DATASET SHAPE
+    # =========================
+    st.markdown(
+        f"""
+        <div class="quality-card">
+            <div class="quality-title">Dataset Shape</div>
+            <table class="clean-table">
+                <tr><th>Metric</th><th>Value</th></tr>
+                <tr><td>Total Rows</td><td>{rows_count}</td></tr>
+                <tr><td>Total Columns</td><td>{cols_count}</td></tr>
+            </table>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # =========================
+    # MISSING VALUE ANALYSIS
+    # =========================
+    st.markdown(
+        f"""
+        <div class="quality-card">
+            <div class="quality-title">Missing Value Analysis (%)</div>
+            <div class="table-scroll">
+                <table class="clean-table">
+                    <tr><th>Column Name</th><th>Missing (%)</th></tr>
+                    {''.join([f"<tr><td>{c}</td><td>{v}%</td></tr>" for c, v in mv.items()])}
+                </table>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # =========================
+    # DUPLICATE ANALYSIS
+    # =========================
+    st.markdown(
+        f"""
+        <div class="quality-card">
+            <div class="quality-title">Duplicate Analysis</div>
+            <table class="clean-table">
+                <tr><th>Metric</th><th>Value</th></tr>
+                <tr><td>Total Duplicate Rows</td><td>{dup_count}</td></tr>
+            </table>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # =========================
+    # DATA TYPES SUMMARY
+    # =========================
+    st.markdown(
+        f"""
+        <div class="quality-card">
+            <div class="quality-title">Data Types Summary</div>
+            <table class="clean-table">
+                <tr><th>Data Type</th><th>Column Count</th></tr>
+                {''.join([f"<tr><td>{d}</td><td>{c}</td></tr>" for d, c in dtype_counts.items()])}
+            </table>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+elif eda_option == "Sales Overview":
+    st.markdown(
+    """
+    <div style="
+        background-color:#2F75B5;
+        padding:28px;
+        border-radius:12px;
+        color:white;
+        font-size:16px;
+        line-height:1.6;
+        margin-bottom:20px;
+    ">
+
+    <b>What this section does:</b>
+
+    This provides a <b>macro-level snapshot of sales performance</b>, answering the question:
+
+    “What does overall sales look like across time?”
+
+    It typically highlights:
+    <ul>
+        <li>Total revenue</li>
+        <li>Total units sold</li>
+        <li>Average order value</li>
+        <li>Sales trends over time</li>
+    </ul><br>
+
+    <b>Why this matters:</b>
+
+    Before diving into granular analysis, it’s important to understand:
+    <ul>
+        <li>Overall business scale</li>
+        <li>Growth or decline patterns</li>
+        <li>Presence of seasonality or anomalies</li>
+    </ul><br>
+
+    <b>Key insights users get:</b>
+    <ul>
+        <li>Baseline sales behavior</li>
+        <li>Early signals of trends or volatility</li>
+        <li>Context for all deeper analyses</li>
+    </ul>
+
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+    col1, col2, col3 = st.columns(3)
 
     if col_rev:
-        st.metric("Total Revenue", f"{df[col_rev].sum():,.2f}")
-        st.metric("Average Order Value", f"{df[col_rev].mean():,.2f}")
-        st.metric("Max Order Value", f"{df[col_rev].max():,.2f}")
+        col1.metric("Total Revenue", f"{df[col_rev].sum():,.2f}")
+        col2.metric("Average Order Value", f"{df[col_rev].mean():,.2f}")
+        col3.metric("Max Order Value", f"{df[col_rev].max():,.2f}")
+
+    col4, col5, col6 = st.columns(3)
+
+    if col_qty and col_price:
+        sales_value = (df[col_qty] * df[col_price]).sum()
+        col4.metric("Sales Value", f"{sales_value:,.2f}")
 
     if col_qty:
-        st.metric("Total Units Sold", f"{df[col_qty].sum():,}")
-        st.metric("Average Units per Transaction", f"{df[col_qty].mean():.2f}")
+        col5.metric("Total Units Sold", f"{df[col_qty].sum():,}")
+        col6.metric("Average Units per Transaction", f"{df[col_qty].mean():.2f}")
 
-# ============================================================
-# 3. PRODUCT ANALYSIS (RANKINGS & COUNTS)
-# ============================================================
+    if "created_at" in df.columns and col_rev:
+        st.subheader("Sales by Time")
 
-with st.expander("3. Product-Level Analysis"):
+        # Convert to datetime safely
+        df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
 
-    if col_product:
-        st.subheader("Top Products by Transaction Count")
-        st.dataframe(df[col_product].value_counts().head(10))
-
-    if col_product and col_rev:
-        st.subheader("Top Products by Revenue")
-        st.dataframe(
-            df.groupby(col_product)[col_rev]
+        # Aggregate sales by date
+        sales_time = (
+            df.groupby(df["created_at"].dt.date)[col_rev]
             .sum()
-            .sort_values(ascending=False)
-            .head(10)
+            .sort_index()
         )
 
-# ============================================================
-# 4. STORE ANALYSIS
-# ============================================================
+        st.bar_chart(sales_time)
 
-with st.expander("4. Store-Level Analysis"):
-
-    if col_store:
-        st.subheader("Transactions per Store")
-        st.dataframe(df[col_store].value_counts().head(10))
 
     if col_store and col_rev:
-        st.subheader("Revenue Contribution by Store")
-        st.dataframe(
+        st.subheader("Sales by Store")
+
+        sales_store = (
             df.groupby(col_store)[col_rev]
             .sum()
             .sort_values(ascending=False)
-            .head(10)
         )
 
-# ============================================================
-# 5. SALES CHANNEL ANALYSIS
-# ============================================================
-
-with st.expander("5. Sales Channel Analysis"):
-
-    if col_channel:
-        st.subheader("Transaction Distribution by Channel")
-        st.dataframe(df[col_channel].value_counts())
-
+        st.bar_chart(sales_store)
     if col_channel and col_rev:
-        st.subheader("Revenue by Channel")
-        st.dataframe(df.groupby(col_channel)[col_rev].sum())
+        st.subheader("Sales by Sales Channel")
 
-# ============================================================
-# 6. PROMOTION ANALYSIS
-# ============================================================
+        sales_channel = (
+            df.groupby(col_channel)[col_rev]
+            .sum()
+            .sort_values(ascending=False)
+        )
 
-with st.expander("6. Promotion Effectiveness"):
+        st.bar_chart(sales_channel)
+
+
+
+elif eda_option == "Product-Level Analysis":
+
+    st.markdown(
+    """
+    <div style="
+        background-color:#2F75B5;
+        padding:28px;
+        border-radius:12px;
+        color:white;
+        font-size:16px;
+        line-height:1.6;
+        margin-bottom:20px;
+    ">
+
+    This section analyzes <b>sales performance at the product (SKU) level</b>.
+
+    It focuses on:
+    <ul>
+        <li>Top- and bottom-performing products</li>
+        <li>Revenue contribution by product</li>
+        <li>Demand concentration across SKUs</li>
+    </ul><br>
+
+    <b>Why this matters:</b>
+
+    Demand forecasting at an aggregate level hides <b>SKU-specific behavior</b>.
+    Some products are fast-moving, others are slow or highly seasonal.<br>
+
+    <b>Key insights users get:</b>
+    <ul>
+        <li>Which products drive the majority of sales</li>
+        <li>Which SKUs may require special forecasting treatment</li>
+        <li>Candidates for product-level demand models</li>
+    </ul>
+
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+    # =========================
+    # REQUIRED COLUMNS
+    # =========================
+    col_store   = "store_id"
+    col_product = "product_id"
+    col_qty     = "quantity_sold"
+    col_rev     = "total_sales_amount"
+
+    # =========================
+    # CONTROL HOW MANY PRODUCTS
+    # =========================
+    TOP_PRODUCTS = 20  
+
+    # =========================
+    # SELECT TOP PRODUCTS
+    # =========================
+    top_products = (
+        df.groupby(col_product)[col_qty]
+        .sum()
+        .sort_values(ascending=False)
+        .head(TOP_PRODUCTS)
+        .index
+    )
+
+    df_f = df[df[col_product].isin(top_products)]
+
+    # =========================
+    # PIVOT TABLES
+    # =========================
+    units_pivot = df_f.pivot_table(
+        index=col_store,
+        columns=col_product,
+        values=col_qty,
+        aggfunc="sum",
+        fill_value=0
+    )
+
+    revenue_pivot = df_f.pivot_table(
+        index=col_store,
+        columns=col_product,
+        values=col_rev,
+        aggfunc="sum",
+        fill_value=0
+    )
+
+    # =========================
+    # SIDE-BY-SIDE FIGURES
+    # =========================
+    fig, axes = plt.subplots(1, 2, figsize=(16, 5))
+
+    x = np.arange(len(units_pivot.index))
+    bar_width = 0.8 / len(units_pivot.columns)   # 👈 auto spacing
+
+    # ===== FIG 1: UNITS SOLD =====
+    for i, product in enumerate(units_pivot.columns):
+        axes[0].bar(
+            x + i * bar_width,
+            units_pivot[product].values,
+            width=bar_width,
+            label=str(product)
+        )
+
+    
+    axes[0].set_xlabel("Store ID")
+    axes[0].set_ylabel("Units Sold")
+    axes[0].set_xticks(x + bar_width * len(units_pivot.columns) / 2)
+    axes[0].set_xticklabels(units_pivot.index.astype(str), rotation=90)
+    axes[0].legend(
+    title="Product",
+    fontsize=8,
+    bbox_to_anchor=(1.02, 1),
+    loc="upper left"
+)
+    axes[0].grid(axis="y", linestyle="--", alpha=0.4)
+
+    # ===== FIG 2: REVENUE =====
+    for i, product in enumerate(revenue_pivot.columns):
+        axes[1].bar(
+            x + i * bar_width,
+            revenue_pivot[product].values,
+            width=bar_width,
+            label=str(product)
+        )
+
+   
+    axes[1].set_xlabel("Store ID")
+    axes[1].set_ylabel("Revenue")
+    axes[1].set_xticks(x + bar_width * len(revenue_pivot.columns) / 2)
+    axes[1].set_xticklabels(revenue_pivot.index.astype(str), rotation=90)
+    axes[1].legend(
+    title="Product",
+    fontsize=8,
+    bbox_to_anchor=(1.02, 1),
+    loc="upper left"
+)
+    axes[1].grid(axis="y", linestyle="--", alpha=0.4)
+
+    plt.tight_layout()
+    st.pyplot(fig)
+
+
+elif eda_option == "Store-Level Analysis":
+
+    st.markdown(
+    """
+    <div style="
+        background-color:#2F75B5;
+        padding:28px;
+        border-radius:12px;
+        color:white;
+        font-size:16px;
+        line-height:1.6;
+        margin-bottom:22px;
+    ">
+
+    <b>What this section does:</b>
+
+    This examines how <b>sales vary across stores or locations</b>.
+
+    It evaluates:
+    <ul>
+        <li>Store-wise revenue and volume</li>
+        <li>Performance comparison across regions</li>
+        <li>High-demand vs low-demand stores</li>
+    </ul><br>
+
+    <b>Why this matters:</b>
+
+    Forecasting accuracy improves when <b>store heterogeneity</b> is understood.<br>
+    Not all stores behave the same, even for the same products.<br><br>
+
+    <b>Key insights users get:</b>
+    <ul>
+        <li>Store demand clusters</li>
+        <li>Regional sales disparities</li>
+        <li>Inputs for store-level or cluster-based forecasting</li>
+    </ul>
+
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+
+
+    # -----------------------------
+    # CONFIG
+    # -----------------------------
+    TOP_STORES = 10
+    TOP_PRODUCTS = 10
+
+    # -----------------------------
+    # FILTER TOP STORES & PRODUCTS
+    # -----------------------------
+    top_stores = (
+        df.groupby(col_store)[col_qty]
+        .sum()
+        .sort_values(ascending=False)
+        .head(TOP_STORES)
+        .index
+    )
+
+    top_products = (
+        df.groupby(col_product)[col_qty]
+        .sum()
+        .sort_values(ascending=False)
+        .head(TOP_PRODUCTS)
+        .index
+    )
+
+    df_f = df[
+        df[col_store].isin(top_stores) &
+        df[col_product].isin(top_products)
+    ]
+
+    # -----------------------------
+    # PIVOT TABLES
+    # -----------------------------
+    units_pivot = df_f.pivot_table(
+        index=col_store,
+        columns=col_product,
+        values=col_qty,
+        aggfunc="sum",
+        fill_value=0
+    )
+
+    revenue_pivot = df_f.pivot_table(
+        index=col_store,
+        columns=col_product,
+        values=col_rev,
+        aggfunc="sum",
+        fill_value=0
+    )
+
+    # -----------------------------
+    # PLOT – SIDE BY SIDE
+    # -----------------------------
+    fig, axes = plt.subplots(1, 2, figsize=(16, 5), sharey=False)
+
+    x = np.arange(len(units_pivot.index))
+    bar_width = 0.8 / len(units_pivot.columns)
+
+    # -------- Units Sold --------
+    for i, product in enumerate(units_pivot.columns):
+        axes[0].bar(
+            x + i * bar_width,
+            units_pivot[product],
+            width=bar_width,
+            label=product
+        )
+
+    
+    axes[0].set_xlabel("Store")
+    axes[0].set_ylabel("Units Sold")
+    axes[0].set_xticks(x + bar_width * (len(units_pivot.columns) / 2))
+    axes[0].set_xticklabels(units_pivot.index, rotation=90)
+    axes[0].grid(axis="y", linestyle="--", alpha=0.4)
+    axes[0].legend(
+    title="Product",
+    fontsize=8,
+    bbox_to_anchor=(1.02, 1),
+    loc="upper left"
+)
+
+    # -------- Revenue --------
+    for i, product in enumerate(revenue_pivot.columns):
+        axes[1].bar(
+            x + i * bar_width,
+            revenue_pivot[product],
+            width=bar_width,
+            label=product
+        )
+
+    
+    axes[1].set_xlabel("Store")
+    axes[1].set_ylabel("Revenue")
+    axes[1].set_xticks(x + bar_width * (len(revenue_pivot.columns) / 2))
+    axes[1].set_xticklabels(revenue_pivot.index, rotation=90)
+    axes[1].grid(axis="y", linestyle="--", alpha=0.4)
+    axes[1].legend(
+    title="Product",
+    fontsize=8,
+    bbox_to_anchor=(1.02, 1),
+    loc="upper left")
+
+    plt.tight_layout()
+    st.pyplot(fig)
+
+
+elif eda_option == "Sales Channel Analysis":
+
+    st.markdown(
+    """
+    <div style="
+        background-color:#2F75B5;
+        padding:28px;
+        border-radius:12px;
+        color:white;
+        font-size:16px;
+        line-height:1.6;
+        margin-bottom:20px;
+    ">
+
+    <b>What this section does:</b>
+
+    This analyzes sales distribution across <b>different channels</b>, such as:
+
+    <ul>
+        <li>Online vs offline</li>
+        <li>Marketplace vs in-store</li>
+        <li>Direct vs third-party platforms</li>
+    </ul><br>
+
+    <b>Why this matters:</b>
+
+    Sales channels often have <b>distinct demand patterns</b>, pricing strategies,
+    and customer behaviors.<br>
+
+    <b>Key insights users get:</b>
+    <ul>
+        <li>Channel-wise demand contribution</li>
+        <li>Channel volatility and stability</li>
+        <li>Whether forecasting should be channel-specific</li>
+    </ul>
+
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+    # -----------------------------
+    # CONFIG
+    # -----------------------------
+    TOP_STORES = 10
+    TOP_PRODUCTS = 10  # ⬅ reduce clutter (important for readability)
+
+    # -----------------------------
+    # FILTER TOP STORES & PRODUCTS
+    # -----------------------------
+    top_stores = (
+        df.groupby(col_store)[col_qty]
+        .sum()
+        .sort_values(ascending=False)
+        .head(TOP_STORES)
+        .index
+    )
+
+    top_products = (
+        df.groupby(col_product)[col_qty]
+        .sum()
+        .sort_values(ascending=False)
+        .head(TOP_PRODUCTS)
+        .index
+    )
+
+    df_f = df[
+        df[col_store].isin(top_stores) &
+        df[col_product].isin(top_products)
+    ]
+
+    # -----------------------------
+    # PIVOT TABLES
+    # -----------------------------
+    units_pivot = df_f.pivot_table(
+        index=col_store,
+        columns=col_product,
+        values=col_qty,
+        aggfunc="sum",
+        fill_value=0
+    )
+
+    revenue_pivot = df_f.pivot_table(
+        index=col_store,
+        columns=col_product,
+        values=col_rev,
+        aggfunc="sum",
+        fill_value=0
+    )
+
+    # -----------------------------
+    # PLOT – SIDE BY SIDE
+    # -----------------------------
+    fig, axes = plt.subplots(1, 2, figsize=(16, 5))
+
+    x = np.arange(len(units_pivot.index))
+    n_products = len(units_pivot.columns)
+    bar_width = 0.75 / n_products
+
+    # -------- Units Sold --------
+    for i, product in enumerate(units_pivot.columns):
+        axes[0].bar(
+            x + i * bar_width,
+            units_pivot[product].values,
+            width=bar_width,
+            label=str(product)
+        )
+
+    axes[0].set_xlabel("Store ID")
+    axes[0].set_ylabel("Units Sold")
+    axes[0].set_xticks(x + bar_width * (n_products / 2))
+    axes[0].set_xticklabels(units_pivot.index, rotation=90)
+    axes[0].grid(axis="y", linestyle="--", alpha=0.4)
+    axes[0].legend(
+        title="Product",
+        fontsize=8,
+        bbox_to_anchor=(1.02, 1),
+        loc="upper left"
+    )
+
+    # -------- Revenue --------
+    for i, product in enumerate(revenue_pivot.columns):
+        axes[1].bar(
+            x + i * bar_width,
+            revenue_pivot[product].values,
+            width=bar_width,
+            label=str(product)
+        )
+
+    axes[1].set_xlabel("Store ID")
+    axes[1].set_ylabel("Revenue")
+    axes[1].set_xticks(x + bar_width * (n_products / 2))
+    axes[1].set_xticklabels(revenue_pivot.index, rotation=90)
+    axes[1].grid(axis="y", linestyle="--", alpha=0.4)
+    axes[1].legend(
+        title="Product",
+        fontsize=8,
+        bbox_to_anchor=(1.02, 1),
+        loc="upper left"
+    )
+
+    plt.tight_layout()
+    st.pyplot(fig)
+
+
+elif eda_option == "Promotion Effectiveness":
 
     if col_promo:
         st.subheader("Transactions under Promotions")
@@ -693,11 +1505,7 @@ with st.expander("6. Promotion Effectiveness"):
             .head(10)
         )
 
-# ============================================================
-# 7. EVENT IMPACT ANALYSIS
-# ============================================================
-
-with st.expander("7. Event Impact Analysis"):
+elif eda_option == "Event Impact Analysis":
 
     if col_event:
         st.subheader("Transactions per Event")
@@ -712,78 +1520,30 @@ with st.expander("7. Event Impact Analysis"):
             .head(10)
         )
 
-# 7. Correlation  ANALYSIS
-
-with st.expander("Top Correlated Features "):
-
-    # 1. Select numeric columns
-    num_df = df.select_dtypes(include=np.number)
+elif eda_option == "Top Correlated Features":
 
     if num_df.shape[1] < 2:
         st.info("Not enough numeric columns for correlation.")
     else:
-        # 2. Correlation
-        corr = num_df.corr()
+        st.dataframe(num_df.corr())
 
-        # 3. Absolute correlation 
-        corr_abs = corr.abs()
-        np.fill_diagonal(corr_abs.values, np.nan)
+elif eda_option == "Summary Report":
 
-        # 4. Get top correlated pairs
-        top_pairs = (
-            corr_abs.unstack()
-            .dropna()
-            .sort_values(ascending=False)
-            .head(8)   
-        )
-
-        # 5. Extract involved features
-        top_features = sorted(
-            set([f for pair in top_pairs.index for f in pair])
-        )
-
-        # 6. Focused correlation matrix
-        focused_corr = corr.loc[top_features, top_features]
-
-        # 7. Plot FULL GRID heatmap
-        fig, ax = plt.subplots(figsize=(6, 4))
-        sns.heatmap(
-            focused_corr,
-            annot=True,
-            fmt=".2f",
-            cmap="coolwarm",
-            linewidths=0.5,
-            cbar=True,
-            ax=ax
-        )
-
-        ax.set_title("Top Correlated Numeric Features ")
-        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
-        ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
-
-        plt.tight_layout()
-        st.pyplot(fig)
-
-
-
-# ============================================================
-# 10. SUMMARY REPORT (INSIGHTS)
-# ============================================================
-
-with st.expander("10. Summary Report"):
-
-    summary = {
+    st.json({
         "Rows": df.shape[0],
         "Columns": df.shape[1],
         "Numeric Columns": num_df.shape[1],
         "Total Revenue": df[col_rev].sum() if col_rev else None,
-        "Total Units Sold": int(df["quantity_sold"].fillna(0).sum()),
-        
-    }
+        "Total Units Sold": int(df[col_qty].fillna(0).sum()) if col_qty else None,
+    })
 
-    st.json(summary)
     st.success("EDA Summary Generated ✔")
 
+
+
+# ============================================================
+# FOOTER
+# ============================================================
 
 st.markdown("""
     <br><br>
