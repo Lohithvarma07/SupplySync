@@ -1083,27 +1083,74 @@ num_df = df.select_dtypes(include=np.number)
 # ============================================================
 # EDA NAVIGATION
 # ============================================================
+# =========================
+# EDA NAVIGATION – ACTIVE BUTTON HIGHLIGHT (SAFE)
+# =========================
 
-eda_option = st.radio(
-    "Select Analysis",
-    [
-        "Data Quality Overview",
-        "Sales Overview",
-        "Product-Level Analysis",
-        "Customer-Level Analysis",
-        "Store-Level Analysis",
-        "Sales Channel Analysis",
-        "Promotion Effectiveness",
-        "Event Impact Analysis",
-        "Summary Report"
-    ],
-    index=None,
-    horizontal=True
-)
+# =========================
+# EDA NAVIGATION (INSTANT COLOR CHANGE)
+# =========================
+
+st.markdown("### 📊 Select Analysis")
+
+if "eda_option" not in st.session_state:
+    st.session_state.eda_option = None
+
+
+def nav_button(label, value):
+    
+    """Instant active highlight + no size change"""
+    if st.session_state.eda_option == value:
+        st.markdown(
+            f"""
+            <div style="
+                background-color:#2F75B5;
+                color:white;
+                padding:14px;
+                border-radius:10px;
+                font-weight:600;
+                text-align:center;
+                margin-bottom:12px;
+            ">
+                {label}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    else:
+        if st.button(label, use_container_width=True):
+            st.session_state.eda_option = value
+            st.rerun() 
+            
+
+
+# ---------- BUTTON GRID ----------
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    nav_button("Data Quality Overview", "Data Quality Overview")
+    nav_button("Product-Level Analysis", "Product-Level Analysis")
+    nav_button("Store-Level Analysis", "Store-Level Analysis")
+
+with col2:
+    nav_button("Sales Overview", "Sales Overview")
+    nav_button("Customer-Level Analysis", "Customer-Level Analysis")
+    nav_button("Sales Channel Analysis", "Sales Channel Analysis")
+
+with col3:
+    nav_button("Promotion Effectiveness", "Promotion Effectiveness")
+    nav_button("Event Impact Analysis", "Event Impact Analysis")
+    nav_button("Summary Report", "Summary Report")
+
+
+eda_option = st.session_state.eda_option
+
+
 
 if eda_option is None:
-    st.info("👆 Please select an analysis above to view insights.")
+    st.info("👆 Select an analysis to view insights.")
     st.stop()
+
 
 # ============================================================
 # EDA ROUTER (⚠️ DO NOT BREAK THIS STRUCTURE)
