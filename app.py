@@ -200,7 +200,7 @@ st.markdown(
 # CSV LOADER FUNCTION (DEPLOYMENT SAFE)
 @st.cache_data
 def load_data():
-    return pd.read_csv("data/fact_consolidated1.csv")
+    return pd.read_csv("data/fact_consolidated.csv")
 
 
 # CENTERED SMALL PLOT FUNCTION

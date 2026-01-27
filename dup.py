@@ -9,16 +9,36 @@ import numpy as np
 
 st.set_page_config(page_title="SupplySyncAI – MLOps UI", layout="wide")
 
-st.markdown(
-    """
-    <style>
-        .stApp {
-            background-color: #FFFFFF;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+st.markdown("""
+<style>
+
+/* App background */
+.stApp {
+    background-color: #FFFFFF;
+    margin: 0;
+    padding: 0;
+}
+
+/* 🔥 Remove ALL app-level top spacing */
+.block-container {
+    padding-top: 0rem !important;
+    margin-top: 0rem !important;
+}
+
+/* 🔥 Remove internal main section padding */
+section.main > div:first-child {
+    padding-top: 0rem !important;
+    margin-top: 0rem !important;
+}
+
+/* ✅ KEEP header visible (do NOT hide it) */
+header {
+    position: relative;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
 
 
 st.markdown(
@@ -43,6 +63,60 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+st.markdown("""
+<style>
+
+/* =========================================
+   SUMMARY GRID (TABLE-LIKE, COMPACT)
+   ========================================= */
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, max-content));
+    gap: 8px;                      /* tighter like tables */
+    margin: 10px 0 16px 0;
+    justify-content: center;
+}
+
+/* =========================================
+   SUMMARY CELL (TABLE STYLE)
+   ========================================= */
+
+.summary-card {
+    background-color: #F9FAFB;     /* table header background */
+    border: 1px solid #D0D7DE;     /* thin table border */
+    border-radius: 0px;            /* sharp edges (table feel) */
+    padding: 10px 14px;            /* compact spacing */
+    text-align: center;
+    min-width: 220px;
+}
+
+/* =========================================
+   HEADER TEXT (LIKE TABLE HEADER)
+   ========================================= */
+
+.summary-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #57606A;                /* muted header color */
+    margin-bottom: 4px;
+}
+
+/* =========================================
+   VALUE TEXT (TABLE CELL VALUE)
+   ========================================= */
+
+.summary-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: #24292F;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+
+
 
 
 st.markdown(
@@ -53,12 +127,12 @@ st.markdown(
         border-radius:12px;
         color:white;
         text-align:center;
-        margin-bottom:20px;
+        margin:0 0 20px 0;
     ">
-        <h1 style="margin-bottom:8px;">
+        <h1 style="margin:0 0 8px 0;">
             AI-Powered Demand Forecasting & Sales Prediction Engine
         </h1>
-        <h3 style="font-weight:400; margin-top:0;">
+        <h3 style="font-weight:400; margin:0;">
             From Broad Estimates to SKU-Level Intelligence
         </h3>
         <p style="font-size:17px; margin-top:15px;">
@@ -126,7 +200,7 @@ st.markdown(
 # CSV LOADER FUNCTION (DEPLOYMENT SAFE)
 @st.cache_data
 def load_data():
-    return pd.read_csv("data/fact_consolidated.csv")
+    return pd.read_csv("data/fact_consolidated1.csv")
 
 
 # CENTERED SMALL PLOT FUNCTION
@@ -222,7 +296,7 @@ if df is not None:
 )
 
     st.data_editor(
-    df.head(40),
+    df.head(10),
     use_container_width=True,
     disabled=True
 )
@@ -243,6 +317,10 @@ if "preprocess_history" not in st.session_state:
         "null_replaced_rows": None,
         "numeric_converted": None
     }
+
+if "preprocessing_completed" not in st.session_state:
+    st.session_state.preprocessing_completed = False
+
 
 
 st.markdown("""
@@ -299,9 +377,9 @@ step = st.radio(
     "Select a Data Pre-Processing Step",
     [
         "Remove Duplicate Rows",
-        "Outliers",
-        "Replace NULL Values with 'Unknown'",
-        "Convert Columns to Numeric (Safe Columns Only)"
+        "Remove Outliers",
+        "Replace Missing Values"
+        
     ],
     index=None,
     horizontal=True
@@ -349,63 +427,109 @@ leading to <b>over-forecasting</b>.
 </div>
 """, unsafe_allow_html=True)
 
-    dup_mask = df.duplicated()
-    dup_rows = df[dup_mask]
-
     # --------------------------------------------------
-# DUPLICATE REMOVAL – CORRECT STATEFUL LOGIC
-# --------------------------------------------------
+    # DUPLICATE REMOVAL – FIXED BEFORE / AFTER LOGIC
+    # --------------------------------------------------
 
-    if st.button("Apply Duplicate Removal"):
+    # Init session keys (SAFE)
+    if "dup_before_df" not in st.session_state:
+        st.session_state.dup_before_df = None
+    if "dup_after_df" not in st.session_state:
+        st.session_state.dup_after_df = None
+    if "dup_removed_df" not in st.session_state:
+        st.session_state.dup_removed_df = None
 
-        # If already done earlier
-        if st.session_state.preprocess_history["duplicates"] is not None:
+
+    if st.button("Apply Duplicate Row Removal"):
+
+        # Prevent re-run
+        if st.session_state.dup_removed_df is not None:
             st.info("Duplicate rows were already removed earlier.")
 
         else:
-            # Detect duplicates ONCE
-            dup_rows = df[df.duplicated()]
+            # 🔒 SNAPSHOT BEFORE (CRITICAL)
+            before_df = st.session_state.df.copy()
+
+            # Detect duplicates from BEFORE snapshot
+            dup_mask = before_df.duplicated()
+            dup_rows = before_df[dup_mask]
 
             if dup_rows.empty:
                 st.info("No duplicate rows found.")
             else:
-                # Save history
-                st.session_state.preprocess_history["duplicates"] = dup_rows.copy()
+                # Cleaned version
+                after_df = before_df.drop_duplicates().reset_index(drop=True)
 
-                # Update working dataframe
-                st.session_state.df = df.drop_duplicates()
+
+                # ✅ STORE ALL THREE STATES (IMMUTABLE)
+                st.session_state.dup_before_df = before_df
+                st.session_state.dup_removed_df = dup_rows
+                st.session_state.dup_after_df = after_df
+
+                # ✅ UPDATE WORKING DF ONLY ONCE
+                st.session_state.df = after_df
+                st.session_state.preprocessing_completed = True
 
                 st.success("✔ Duplicate rows removed")
 
+
     # --------------------------------------------------
-    # SHOW HISTORY (ONLY IF EXISTS)
+    # OUTPUT SECTION – ALWAYS USE SNAPSHOTS
     # --------------------------------------------------
-    if st.session_state.preprocess_history["duplicates"] is not None:
-        st.markdown("#### 🧾 Duplicate Rows Removed")
-        st.dataframe(
-            st.session_state.preprocess_history["duplicates"],
-            use_container_width=True
+
+    if st.session_state.dup_removed_df is not None:
+
+        before_df = st.session_state.dup_before_df   # 🔒 frozen
+        after_df = st.session_state.dup_after_df     # 🔒 frozen
+        removed_df = st.session_state.dup_removed_df     
+        st.markdown("#### 🧾 Duplicate Removal Summary")
+        st.markdown("""
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-title">Rows Before</div>
+                <div class="summary-value">{}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Rows After</div>
+                <div class="summary-value">{}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Duplicates Removed</div>
+                <div class="summary-value">{}</div>
+            </div>
+        </div>
+        """.format(
+            before_df.shape[0],
+            after_df.shape[0],
+            removed_df.shape[0]
+        ), unsafe_allow_html=True)
+
+
+        # ===== BEFORE =====
+        st.markdown(
+            f"#### 📌 Before Duplicate Removal ({before_df.shape[0]} Rows)"
         )
+        st.dataframe(before_df, use_container_width=True)
+
+        # ===== AFTER =====
+        st.markdown(
+            f"#### ✅ After Duplicate Removal ({after_df.shape[0]} Rows)"
+        )
+        st.dataframe(after_df, use_container_width=True)
+
+        # ===== REMOVED =====
+        st.markdown(
+            f"#### ❌  Duplicates Removed ({removed_df.shape[0]} Rows)"
+        )
+        st.dataframe(removed_df, use_container_width=True)
+
 
     # ============================================================
     # OUTLIER DETECTION (IQR-BASED – FLAG ONLY)
     # ============================================================
-if step == "Outliers":
+if step == "Remove Outliers":
 
-    st.markdown("""
-    <div style="
-        background-color:#0B2C5D;
-        padding:18px 25px;
-        border-radius:10px;
-        color:white;
-        margin-top:25px;
-        margin-bottom:12px;
-    ">
-        <h3 style="margin:0;">
-            Outlier Detection (IQR-Based Validation)
-        </h3>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("### Remove Outliers")
 
     st.markdown("""
     <div style="
@@ -418,15 +542,40 @@ if step == "Outliers":
         margin-bottom:20px;
     ">
     <b>What this does:</b><br>
-    Identifies <b>extreme values (outliers)</b> in numeric fields using the
-    <b>Interquartile Range (IQR)</b> method.<br><br>
+    This step identifies and handles <b>statistical outliers</b> in numeric fields using a
+    <b>robust IQR-based method</b>.
 
-    <b>Important:</b>
+    Outlier handling is performed <b>internally</b> and follows a <b>two-level strategy</b>:
     <ul>
-        <li>No rows are deleted</li>
-        <li>No values are modified</li>
-        <li>Used only for data validation</li>
+        <li><b>Mild anomalies</b> are <b>capped</b> to safe bounds (no row deletion)</li>
+        <li><b>Extreme anomalies</b> in <b>critical columns</b> are <b>removed</b></li>
     </ul>
+
+    <br>
+
+    <b>Why this is important:</b>
+    <ul>
+        <li>Prevents extreme values from <b>skewing averages and distributions</b></li>
+        <li>Reduces noise without discarding valuable data</li>
+        <li>Ensures numeric stability for downstream models</li>
+        <li>Avoids over-cleaning by deleting only <b>truly abnormal records</b></li>
+    </ul>
+    <br>
+
+    <b>How it helps forecasting:</b>
+    <li>
+    Demand forecasting models are highly sensitive to extreme numeric values.
+    By controlling these extremes, the model learns from realistic historical behavior
+    rather than rare or erroneous spikes.
+    </li>
+
+    <li>
+    This improves forecasting by preserving <b>true demand signals</b>, reducing noise,
+    preventing overreaction to anomalies, and ensuring forecasts remain
+    <b>stable, generalizable, and business-relevant</b> across time, products, and stores.
+    </li>
+
+
     </div>
     """, unsafe_allow_html=True)
 
@@ -434,99 +583,141 @@ if step == "Outliers":
 
     df = st.session_state.df
 
+    # --------------------------------------------------
     # NUMERIC COLUMN DETECTION
+    # --------------------------------------------------
     numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
 
     if not numeric_cols:
         st.info("No numeric columns available for outlier detection.")
         st.stop()
 
-    # MULTISELECT WITH SELECT ALL
-    options = ["Select All"] + numeric_cols
+    # --------------------------------------------------
+    # BASE COLUMNS (MOST TRUSTWORTHY FOR DELETION)
+    # --------------------------------------------------
+    DELETE_COLS = ["quantity_sold", "unit_price"]
 
-    selected = st.multiselect(
-        "Select numeric columns to check for outliers",
-        options
-    )
+    # --------------------------------------------------
+    # INIT SESSION KEYS
+    # --------------------------------------------------
+    if "out_before_df" not in st.session_state:
+        st.session_state.out_before_df = None
+    if "out_after_df" not in st.session_state:
+        st.session_state.out_after_df = None
+    if "out_removed_df" not in st.session_state:
+        st.session_state.out_removed_df = None
 
-    # Resolve selection
-    if "Select All" in selected:
-        selected_cols = numeric_cols
-    else:
-        selected_cols = selected
+    # --------------------------------------------------
+    # APPLY AGGRESSIVE OUTLIER HANDLING
+    # --------------------------------------------------
+    if st.button("Apply Outlier Removal"):
 
-    # ------------------------------------------------------------
-    # DETECT OUTLIERS (ON BUTTON CLICK ONLY)
-    # ------------------------------------------------------------
-
-    if st.button("Detect Outliers"):
-
-        if not selected_cols:
-            st.warning("⚠ Please select at least one numeric column.")
+        if st.session_state.out_removed_df is not None:
+            st.info("Outliers were already handled earlier.")
 
         else:
-            outlier_results = {}
+            before_df = df.copy()
+            after_df = before_df.copy()
 
-            for col in selected_cols:
+            # Count how many columns flag each row
+            outlier_count = pd.Series(0, index=before_df.index)
 
-                Q1 = df[col].quantile(0.25)
-                Q3 = df[col].quantile(0.75)
+            for col in numeric_cols:
+                Q1 = before_df[col].quantile(0.25)
+                Q3 = before_df[col].quantile(0.75)
                 IQR = Q3 - Q1
 
-                lower = Q1 - 1.5 * IQR
-                upper = Q3 + 1.5 * IQR
+                mild_lower = Q1 - 1.5 * IQR
+                mild_upper = Q3 + 1.5 * IQR
 
-                outliers = df[
-                    (df[col] < lower) | (df[col] > upper)
-                ]
+                # More aggressive extreme bounds
+                extreme_lower = Q1 - 2.0 * IQR
+                extreme_upper = Q3 + 2.0 * IQR
 
-                if not outliers.empty:
-                    outlier_results[col] = {
-                        "lower": lower,
-                        "upper": upper,
-                        "count": outliers.shape[0],
-                        "rows": outliers[[col]].copy()
-                    }
+                # Count mild outliers
+                is_mild = (
+                    (before_df[col] < mild_lower) |
+                    (before_df[col] > mild_upper)
+                )
 
-            # Save history ONLY if something found
-            if outlier_results:
-                st.session_state.preprocess_history["outliers"] = outlier_results
-                st.success("✔ Outlier detection completed")
-            else:
-                st.info("No outliers detected for selected columns.")
+                outlier_count += is_mild.astype(int)
 
-    # ------------------------------------------------------------
-    # SHOW OUTLIER HISTORY (PERSISTENT)
-    # ------------------------------------------------------------
+                # Hard delete if base column is extreme
+                if col in DELETE_COLS:
+                    outlier_count += (
+                        (before_df[col] < extreme_lower) |
+                        (before_df[col] > extreme_upper)
+                    ).astype(int) * 2  # heavier weight
 
-    if st.session_state.preprocess_history["outliers"]:
+                # Cap all numeric columns
+                after_df[col] = after_df[col].clip(mild_lower, mild_upper)
 
-        st.markdown("### 🧾 Outlier Detection History")
+            # 🔥 DELETE RULE (AGGRESSIVE BUT LOGICAL)
+            # Remove rows flagged in 3+ signals
+            extreme_mask = outlier_count >= 4
 
-        for col, info in st.session_state.preprocess_history["outliers"].items():
+            removed_df = before_df[extreme_mask]
+            after_df = after_df[~extreme_mask].reset_index(drop=True)
 
-            st.markdown(f"#### 📌 Outliers for `{col}`")
+            # Save snapshots
+            st.session_state.out_before_df = before_df
+            st.session_state.out_removed_df = removed_df
+            st.session_state.out_after_df = after_df
 
-            st.markdown(f"""
-            **IQR Bounds**
-            - Lower Bound: `{info['lower']:.2f}`
-            - Upper Bound: `{info['upper']:.2f}`
-            - Outliers Found: **{info['count']}**
-            """)
+            st.session_state.df = after_df
+            st.session_state.preprocessing_completed = True
 
-            st.dataframe(
-                info["rows"].head(20),
-                use_container_width=True
-            )
+            st.success("✔ Outliers handled successfully (aggressive mode)")
+
+    # --------------------------------------------------
+    # OUTPUT SECTION (UNCHANGED)
+    # --------------------------------------------------
+    if st.session_state.out_removed_df is not None:
+
+        before_df = st.session_state.out_before_df
+        after_df = st.session_state.out_after_df
+        removed_df = st.session_state.out_removed_df
+
+        st.markdown("#### 🧾 Outlier Removal Summary")
+        st.markdown("""
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-title">Rows Before</div>
+                <div class="summary-value">{}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Rows After</div>
+                <div class="summary-value">{}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Outliers Removed</div>
+                <div class="summary-value">{}</div>
+            </div>
+        </div>
+        """.format(
+            before_df.shape[0],
+            after_df.shape[0],
+            removed_df.shape[0]
+        ), unsafe_allow_html=True)
+
+        st.markdown(f"#### 📌 Before Outlier Handling ({before_df.shape[0]} Rows)")
+        st.dataframe(before_df, use_container_width=True)
+
+        st.markdown(f"#### ✅ After Outlier Handling ({after_df.shape[0]} Rows)")
+        st.dataframe(after_df, use_container_width=True)
+
+        st.markdown(f"#### ❌ Outliers Removed ({removed_df.shape[0]} Rows)")
+        st.dataframe(removed_df, use_container_width=True)
+
 
 
 # ============================================================
 # 3️⃣ REPLACE NULL VALUES WITH "UNKNOWN"
 # ============================================================
 
-elif step == "Replace NULL Values with 'Unknown'":
+elif step == "Replace Missing Values":
 
-    st.markdown("### Replace NULL Values with 'Unknown'")
+    st.markdown("### Replace Missing Values")
 
     st.markdown(
     """
@@ -575,181 +766,94 @@ elif step == "Replace NULL Values with 'Unknown'":
 )
 
 
-        # ------------------------------------------------------------
-    # NULL VALUE REPLACEMENT (STATEFUL + HISTORY PRESERVED)
+    # ============================================================
+    # NULL VALUE REPLACEMENT (STATEFUL + AFFECTED ROWS ONLY)
+    # ============================================================
+
+    df = st.session_state.df
+
     # ------------------------------------------------------------
+    # INIT SESSION KEYS
+    # ------------------------------------------------------------
+    if "null_before_rows" not in st.session_state:
+        st.session_state.null_before_rows = None
+    if "null_after_rows" not in st.session_state:
+        st.session_state.null_after_rows = None
+    if "null_replaced_cols" not in st.session_state:
+        st.session_state.null_replaced_cols = None
 
-    # Detect NULLs BEFORE replacement (always use current df)
+
+    # ------------------------------------------------------------
+    # DETECT NULLS (CURRENT DF)
+    # ------------------------------------------------------------
     null_mask = df.isnull()
-
-    rows_with_nulls = df[null_mask.any(axis=1)]
+    affected_rows_before = df[null_mask.any(axis=1)]
     null_counts = null_mask.sum()
-    null_counts = null_counts[null_counts > 0]  # only affected columns
+    null_counts = null_counts[null_counts > 0]
 
+
+    # ------------------------------------------------------------
+    # APPLY NULL REPLACEMENT
+    # ------------------------------------------------------------
     if st.button("Apply NULL Replacement"):
 
         if null_counts.empty:
             st.info("NULL values were already handled earlier.")
 
         else:
-            # ✅ Save history BEFORE modifying df
-            st.session_state.preprocess_history["null_replaced_cols"] = (
+            # 🔒 SNAPSHOT ONLY AFFECTED ROWS (BEFORE)
+            st.session_state.null_before_rows = affected_rows_before.copy()
+
+            # SAVE COLUMN IMPACT
+            st.session_state.null_replaced_cols = (
                 null_counts.to_frame("NULL Count")
             )
 
-            st.session_state.preprocess_history["null_replaced_rows"] = (
-                rows_with_nulls.copy()
-            )
-
-            # ✅ Apply replacement
+            # APPLY REPLACEMENT
             df_updated = df.fillna("Unknown")
             st.session_state.df = df_updated
+            st.session_state.preprocessing_completed = True
+
+            # 🔒 SNAPSHOT SAME ROWS AFTER REPLACEMENT
+            st.session_state.null_after_rows = df_updated.loc[
+                affected_rows_before.index
+            ].copy()
 
             st.success("✔ NULL values replaced with 'Unknown'")
 
-    # ------------------------------------------------------------
-    # SHOW HISTORY (PERSISTENT — EVEN AFTER SWITCHING STEPS)
-    # ------------------------------------------------------------
 
-    if st.session_state.preprocess_history["null_replaced_cols"] is not None:
+    # ------------------------------------------------------------
+    # OUTPUT SECTION – AFFECTED ROWS ONLY
+    # ------------------------------------------------------------
+    if (
+    st.session_state.null_before_rows is not None and
+    st.session_state.null_after_rows is not None and
+    st.session_state.null_replaced_cols is not None
+):
 
+
+        before_rows = st.session_state.null_before_rows
+        after_rows = st.session_state.null_after_rows
+        replaced_cols = st.session_state.null_replaced_cols
+
+        
+        # ===================== COLUMNS =====================
         st.markdown("#### 🧾 Columns Where NULL Values Were Replaced")
-        st.dataframe(
-            st.session_state.preprocess_history["null_replaced_cols"],
-            use_container_width=True
+        st.dataframe(replaced_cols, use_container_width=True)
+
+        # ===================== BEFORE =====================
+        st.markdown(
+            f"#### 📌 Rows Before Missing Values Replacement ({before_rows.shape[0]} Rows)"
         )
+        st.dataframe(before_rows, use_container_width=True)
 
-    if st.session_state.preprocess_history["null_replaced_rows"] is not None:
-
-        st.markdown("#### 🧾 Rows Where NULL Values Were Replaced")
-        st.dataframe(
-            st.session_state.preprocess_history["null_replaced_rows"],
-            use_container_width=True
+        # ===================== AFTER =====================
+        st.markdown(
+            f"#### ✅ Rows After Missing Values Replacement ({after_rows.shape[0]} Rows)"
         )
+        st.dataframe(after_rows, use_container_width=True)
 
 
-# ============================================================
-# 4️⃣ CONVERT COLUMNS TO NUMERIC (SAFE ONLY)
-# ============================================================
-
-elif step == "Convert Columns to Numeric (Safe Columns Only)":
-
-    st.markdown("### Convert Columns to Numeric")
-
-    st.markdown(
-    """
-    <div style="
-        background-color:#2F75B5;
-        padding:28px;
-        border-radius:12px;
-        color:white;
-        font-size:16px;
-        line-height:1.6;
-        margin-bottom:20px;
-    ">
-
-    <b>What this does:<br>
-
-    This step converts <b>safe, measurable columns</b> into numeric formats so they can be used in analysis and ML models.
-
-    <b>Examples of safe numeric columns:</b>
-
-    <ul>
-        <li>Quantity Sold</li>
-        <li>Unit Price</li>
-        <li>Total Sales Amount</li>
-        <li>Discount Applied</li>
-        <li>Tax Amount</li>
-        <li>Satisfaction Score</li>
-        <li>Forecast Quantity</li>
-    </ul><br>
-
-    <b>What is NOT converted:<br>
-
-    <ul>
-        <li>IDs (Product ID, Store ID, Customer ID)</li>
-        <li>Categorical labels</li>
-        <li>Descriptive text fields</li>
-    </ul><br>
-
-    <b>Why this is important:<br>
-
-    <ul>
-        <li>Enables mathematical operations and aggregations</li>
-        <li>Required for correlation analysis and model training</li>
-        <li>Prevents runtime errors in ML pipelines</li>
-    </ul><br>
-
-    
-    <b>Why “safe columns only” matters:<br>
-
-    Blindly converting columns can:<br>
-
-    <ul>
-        <li>Corrupt IDs</li>
-        <li>Break joins</li>
-        <li>Create misleading numerical patterns</li>
-    </ul>
-
-    This step ensures <b>only logically numeric fields are converted.</b>
-
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-        # ============================================================
-    # CONVERT COLUMNS TO NUMERIC (SAFE ONLY + HISTORY)
-    # ============================================================
-
-    exclude = [
-        "transaction_id", "product_id", "store_id", "customer_id",
-        "sales_channel_id", "promo_id", "event_id"
-    ]
-
-    df = st.session_state.df
-
-    # Candidate columns (object type only, excluding IDs)
-    candidate_cols = [
-        c for c in df.columns
-        if c not in exclude and df[c].dtype == "object"
-    ]
-
-    # ------------------------------------------------------------
-    # APPLY CONVERSION (ONCE)
-    # ------------------------------------------------------------
-
-    if st.button("Apply Numeric Conversion"):
-
-        df_updated = df.copy()
-        converted_cols = []
-
-        for col in candidate_cols:
-            before = df_updated[col].dtype
-            df_updated[col] = pd.to_numeric(df_updated[col], errors="ignore")
-            if df_updated[col].dtype != before:
-                converted_cols.append(col)
-
-        # Update session dataframe
-        st.session_state.df = df_updated
-
-        # Save history ONLY if something converted
-        if converted_cols:
-            st.session_state.preprocess_history["numeric_converted"] = converted_cols
-            st.success("✔ Numeric conversion applied")
-        else:
-            st.info("No columns were converted.")
-
-    # ------------------------------------------------------------
-    # SHOW CONVERSION HISTORY (PERSISTENT)
-    # ------------------------------------------------------------
-
-    if st.session_state.preprocess_history["numeric_converted"]:
-
-        st.markdown("#### 🧾 Numeric Conversion History")
-        st.write(
-            st.session_state.preprocess_history["numeric_converted"]
-        )
 
 st.markdown("""
 <style>
@@ -808,14 +912,14 @@ div[data-baseweb="radio"] input:checked + div {
 
 
 /* =====================================================
-   DATA QUALITY – LAYOUT
+   DATA QUALITY – LAYOUT (FINAL, CLEAN)
    ===================================================== */
 
 /* Horizontal row for 3 cards */
 .quality-row {
     display: flex;
     gap: 16px;
-    margin-bottom: 20px;
+    margin-bottom: 48px;   /* clear gap between rows */
 }
 
 /* Individual card */
@@ -823,17 +927,23 @@ div[data-baseweb="radio"] input:checked + div {
     flex: 1;
     background-color: #FFFFFF;
     border-radius: 12px;
-    padding: 14px 16px;
+    padding: 16px 18px;
     box-shadow: 0px 2px 8px rgba(0,0,0,0.06);
     border-left: 5px solid #2F75B5;
+    margin-bottom: 48px;   /* ~5 line gap between sections */
 }
 
-/* Card title */
+/* Section title with light blue band (AS PER IMAGE) */
 .quality-title {
     font-size: 15px;
     font-weight: 600;
-    margin-bottom: 10px;
-    color: #2C3E50;
+    color: #1F4E79;
+
+    background-color: #EAF2FB;   /* exact light blue strip */
+    padding: 10px 14px;
+    border-radius: 6px;
+
+    margin-bottom: 18px;
 }
 
 /* Scrollable content inside card */
@@ -878,15 +988,22 @@ div[data-baseweb="radio"] input:checked + div {
 """, unsafe_allow_html=True)
 
 
+
 # ============================================================
-# STEP 3 – FULL ADAPTIVE EDA (ANALYSIS-FOCUSED)
+# STEP 3 – EDA (LOCKED UNTIL PREPROCESSING)
 # ============================================================
+
+if not st.session_state.preprocessing_completed:
+    st.info("ℹ Please apply at least one data pre-processing step to unlock EDA.")
+    st.stop()
+
 
 df = st.session_state.get("df", None)
 
 if df is None:
-    st.warning("⚠ No dataset loaded. Please load data first.")
+    st.warning("⚠ No dataset available.")
     st.stop()
+
 
 # ---------------- EDA HEADER ----------------
 st.markdown(
@@ -966,27 +1083,74 @@ num_df = df.select_dtypes(include=np.number)
 # ============================================================
 # EDA NAVIGATION
 # ============================================================
+# =========================
+# EDA NAVIGATION – ACTIVE BUTTON HIGHLIGHT (SAFE)
+# =========================
 
-eda_option = st.radio(
-    "Select Analysis",
-    [
-        "Data Quality Overview",
-        "Sales Overview",
-        "Product-Level Analysis",
-        "Store-Level Analysis",
-        "Sales Channel Analysis",
-        "Promotion Effectiveness",
-        "Event Impact Analysis",
-        "Top Correlated Features",
-        "Summary Report"
-    ],
-    index=None,
-    horizontal=True
-)
+# =========================
+# EDA NAVIGATION (INSTANT COLOR CHANGE)
+# =========================
+
+st.markdown("### 📊 Select Analysis")
+
+if "eda_option" not in st.session_state:
+    st.session_state.eda_option = None
+
+
+def nav_button(label, value):
+    
+    """Instant active highlight + no size change"""
+    if st.session_state.eda_option == value:
+        st.markdown(
+            f"""
+            <div style="
+                background-color:#2F75B5;
+                color:white;
+                padding:14px;
+                border-radius:10px;
+                font-weight:600;
+                text-align:center;
+                margin-bottom:12px;
+            ">
+                {label}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    else:
+        if st.button(label, use_container_width=True):
+            st.session_state.eda_option = value
+            st.rerun() 
+            
+
+
+# ---------- BUTTON GRID ----------
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    nav_button("Data Quality Overview", "Data Quality Overview")
+    nav_button("Product-Level Analysis", "Product-Level Analysis")
+    nav_button("Store-Level Analysis", "Store-Level Analysis")
+
+with col2:
+    nav_button("Sales Overview", "Sales Overview")
+    nav_button("Customer-Level Analysis", "Customer-Level Analysis")
+    nav_button("Sales Channel Analysis", "Sales Channel Analysis")
+
+with col3:
+    nav_button("Promotion Effectiveness", "Promotion Effectiveness")
+    nav_button("Event Impact Analysis", "Event Impact Analysis")
+    nav_button("Summary Report", "Summary Report")
+
+
+eda_option = st.session_state.eda_option
+
+
 
 if eda_option is None:
-    st.info("👆 Please select an analysis above to view insights.")
+    st.info("👆 Select an analysis to view insights.")
     st.stop()
+
 
 # ============================================================
 # EDA ROUTER (⚠️ DO NOT BREAK THIS STRUCTURE)
@@ -1162,25 +1326,78 @@ elif eda_option == "Sales Overview":
     """,
     unsafe_allow_html=True
 )
-    col1, col2, col3 = st.columns(3)
+    st.markdown("### 📊 Sales Overview")
 
-    if col_rev:
-        col1.metric("Total Revenue", f"{df[col_rev].sum():,.2f}")
-        col2.metric("Average Order Value", f"{df[col_rev].mean():,.2f}")
-        col3.metric("Max Order Value", f"{df[col_rev].max():,.2f}")
+    # ---------- ROW 1 ----------
+    st.markdown(
+    """
+    <div class="summary-grid">
+        <div class="summary-card">
+            <div class="summary-title">Total Revenue</div>
+            <div class="summary-value">{}</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-title">Average Order Value</div>
+            <div class="summary-value">{}</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-title">Maximum Order Value</div>
+            <div class="summary-value">{}</div>
+        </div>
+    </div>
+    """.format(
+        f"${df[col_rev].sum():,.2f}" if col_rev else "NA",
+        f"${df[col_rev].mean():,.2f}" if col_rev else "NA",
+        f"${df[col_rev].max():,.2f}" if col_rev else "NA",
+    ),
+    unsafe_allow_html=True
+    )
 
-    col4, col5, col6 = st.columns(3)
+    # ---------- ROW 2 ----------
+    st.markdown(
+    """
+    <div class="summary-grid">
+        <div class="summary-card">
+            <div class="summary-title">Total Sales</div>
+            <div class="summary-value">{}</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-title">Total Units Sold</div>
+            <div class="summary-value">{}</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-title">Average Units / Transaction</div>
+            <div class="summary-value">{}</div>
+        </div>
+    </div>
+    """.format(
+        f"${(df[col_qty] * df[col_price]).sum():,.2f}" if col_qty and col_price else "NA",
+        f"{df[col_qty].sum():,}" if col_qty else "NA",
+        f"{df[col_qty].mean():.2f}" if col_qty else "NA",
+    ),
+    unsafe_allow_html=True
+    )
 
-    if col_qty and col_price:
-        sales_value = (df[col_qty] * df[col_price]).sum()
-        col4.metric("Sales Value", f"{sales_value:,.2f}")
 
-    if col_qty:
-        col5.metric("Total Units Sold", f"{df[col_qty].sum():,}")
-        col6.metric("Average Units per Transaction", f"{df[col_qty].mean():.2f}")
 
     if "created_at" in df.columns and col_rev:
-        st.subheader("Sales by Time")
+        st.markdown(
+    """
+    <div style="
+        background-color:#2F75B5;
+        padding:18px 25px;
+        border-radius:10px;
+        font-size:20px;
+        color:white;
+        margin-top:20px;
+        margin-bottom:10px;
+        text-align:center;
+    ">
+        <b>Sales By Time</b>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
         # Convert to datetime safely
         df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
@@ -1196,7 +1413,23 @@ elif eda_option == "Sales Overview":
 
 
     if col_store and col_rev:
-        st.subheader("Sales by Store")
+        st.markdown(
+    """
+    <div style="
+        background-color:#2F75B5;
+        padding:18px 25px;
+        border-radius:10px;
+        font-size:20px;
+        color:white;
+        margin-top:20px;
+        margin-bottom:10px;
+        text-align:center;
+    ">
+        <b>Sales By Store</b>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
         sales_store = (
             df.groupby(col_store)[col_rev]
@@ -1206,7 +1439,23 @@ elif eda_option == "Sales Overview":
 
         st.bar_chart(sales_store)
     if col_channel and col_rev:
-        st.subheader("Sales by Sales Channel")
+        st.markdown(
+    """
+    <div style="
+        background-color:#2F75B5;
+        padding:18px 25px;
+        border-radius:10px;
+        font-size:20px;
+        color:white;
+        margin-top:20px;
+        margin-bottom:10px;
+        text-align:center;
+    ">
+        <b>Sales By Sales Channels</b>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
         sales_channel = (
             df.groupby(col_channel)[col_rev]
@@ -1231,8 +1480,8 @@ elif eda_option == "Product-Level Analysis":
         line-height:1.6;
         margin-bottom:20px;
     ">
-
-    This section analyzes <b>sales performance at the product (SKU) level</b>.
+    <b>What this section does:</b>
+    <li>This section analyzes <b>sales performance at the product (SKU) level</li>
 
     It focuses on:
     <ul>
@@ -1256,106 +1505,497 @@ elif eda_option == "Product-Level Analysis":
     </div>
     """,
     unsafe_allow_html=True
-)
-    # =========================
-    # REQUIRED COLUMNS
-    # =========================
-    col_store   = "store_id"
+    )
+    # =========================================================
+    # ENSURE PRODUCT METRICS & TOP PRODUCTS ARE DEFINED
+    # =========================================================
     col_product = "product_id"
     col_qty     = "quantity_sold"
-    col_rev     = "total_sales_amount"
+    col_revenue = "total_sales_amount"
+    col_profit  = "profit_value"
 
-    # =========================
-    # CONTROL HOW MANY PRODUCTS
-    # =========================
-    TOP_PRODUCTS = 20  
-
-    # =========================
-    # SELECT TOP PRODUCTS
-    # =========================
-    top_products = (
-        df.groupby(col_product)[col_qty]
-        .sum()
-        .sort_values(ascending=False)
-        .head(TOP_PRODUCTS)
-        .index
+    product_metrics = (
+        df.groupby(col_product)
+        .agg(
+            total_quantity_sold=(col_qty, "sum"),
+            total_revenue=(col_revenue, "sum"),
+            total_profit=(col_profit, "sum")
+        )
+        .sort_values("total_revenue", ascending=False)
     )
 
-    df_f = df[df[col_product].isin(top_products)]
+    TOP_N = 20
+    top_products = product_metrics.head(TOP_N)
 
-    # =========================
-    # PIVOT TABLES
-    # =========================
-    units_pivot = df_f.pivot_table(
-        index=col_store,
-        columns=col_product,
-        values=col_qty,
-        aggfunc="sum",
-        fill_value=0
-    )
+    # Products to label in scatter (same logic you already had)
+    top_demand = product_metrics.sort_values(
+        "total_quantity_sold", ascending=False
+    ).head(5)
 
-    revenue_pivot = df_f.pivot_table(
-        index=col_store,
-        columns=col_product,
-        values=col_rev,
-        aggfunc="sum",
-        fill_value=0
-    )
+    top_profit = product_metrics.sort_values(
+        "total_profit", ascending=False
+    ).head(5)
 
-    # =========================
-    # SIDE-BY-SIDE FIGURES
-    # =========================
-    fig, axes = plt.subplots(1, 2, figsize=(16, 5))
+    label_products = pd.concat([top_demand, top_profit]).drop_duplicates()
 
-    x = np.arange(len(units_pivot.index))
-    bar_width = 0.8 / len(units_pivot.columns)   # 👈 auto spacing
 
-    # ===== FIG 1: UNITS SOLD =====
-    for i, product in enumerate(units_pivot.columns):
-        axes[0].bar(
-            x + i * bar_width,
-            units_pivot[product].values,
-            width=bar_width,
-            label=str(product)
+    # =========================================================
+    # BLUE TITLE BOX (SAME STYLE FOR ALL CHARTS)
+    # =========================================================
+    def blue_title(title):
+        st.markdown(
+            f"""
+            <div style="
+                background-color:#2F75B5;
+                padding:14px;
+                border-radius:8px;
+                font-size:16px;
+                color:white;
+                margin-bottom:8px;
+                text-align:center;
+                font-weight:600;
+            ">
+                {title}
+            </div>
+            """,
+            unsafe_allow_html=True
         )
 
-    
-    axes[0].set_xlabel("Store ID")
-    axes[0].set_ylabel("Units Sold")
-    axes[0].set_xticks(x + bar_width * len(units_pivot.columns) / 2)
-    axes[0].set_xticklabels(units_pivot.index.astype(str), rotation=90)
-    axes[0].legend(
-    title="Product",
-    fontsize=8,
-    bbox_to_anchor=(1.02, 1),
-    loc="upper left"
-)
-    axes[0].grid(axis="y", linestyle="--", alpha=0.4)
+    # =========================================================
+    # ROW 1 — EXISTING TWO PLOTS (LOGIC UNTOUCHED)
+    # =========================================================
+    col1, col2 = st.columns(2)
 
-    # ===== FIG 2: REVENUE =====
-    for i, product in enumerate(revenue_pivot.columns):
-        axes[1].bar(
-            x + i * bar_width,
-            revenue_pivot[product].values,
-            width=bar_width,
-            label=str(product)
+    # ---------- PLOT 1: Revenue Contribution (UNCHANGED LOGIC) ----------
+    with col1:
+        blue_title("Revenue Contribution by Product ")
+
+        fig1, ax1 = plt.subplots(figsize=(7, 4))
+
+        ax1.bar(
+            top_products.index.astype(str),
+            top_products["total_revenue"]
         )
 
+        ax1.set_xlabel("Product ID")
+        ax1.set_ylabel("Total Revenue")
+        ax1.tick_params(axis="x", rotation=45)
+        ax1.grid(axis="y", linestyle="--", alpha=0.4)
+
+        st.pyplot(fig1)
+        plt.close(fig1)
+
+
+    # ---------- PLOT 2: Demand vs Profitability (UNCHANGED LOGIC) ----------
+    with col2:
+        blue_title("Product Demand vs Profitability")
+
+        fig2, ax2 = plt.subplots(figsize=(7, 4))
+
+        ax2.scatter(
+            product_metrics["total_quantity_sold"],
+            product_metrics["total_profit"],
+            alpha=0.6
+        )
+
+        ax2.set_xlabel("Total Quantity Sold (Demand)")
+        ax2.set_ylabel("Total Profit")
+        ax2.grid(True, linestyle="--", alpha=0.4)
+
+        # SAME annotation logic you already had
+        for pid, row in label_products.iterrows():
+            ax2.annotate(
+                pid,
+                (row["total_quantity_sold"], row["total_profit"]),
+                xytext=(5, 5),
+                textcoords="offset points",
+                fontsize=8,
+                alpha=0.9
+            )
+
+        st.pyplot(fig2)
+        plt.close(fig2)
+
+    # =========================================================
+    # ROW 2 — TWO NEW 2D ANALYSES (SAME DESIGN)
+    # =========================================================
+    col3, col4 = st.columns(2)
+
+    # ---------- PLOT 3: Revenue vs Discount by Product ----------
+    with col3:
+        blue_title("Revenue vs Discount by Product ")
+
+        product_metrics_viz = (
+            df.groupby("product_id")
+            .agg(
+                total_revenue=("total_sales_amount", "sum"),
+                total_discount=("discount_applied", "sum")
+            )
+            .sort_values("total_revenue", ascending=False)
+            .head(20)
+        )
+
+        fig3, ax3 = plt.subplots(figsize=(7, 4))
+
+        x = np.arange(len(product_metrics_viz))
+        width = 0.35
+
+        ax3.bar(
+            x - width/2,
+            product_metrics_viz["total_revenue"],
+            width,
+            label="Revenue"
+        )
+
+        ax3.bar(
+            x + width/2,
+            product_metrics_viz["total_discount"],
+            width,
+            label="Discount Given"
+        )
+        ax3.set_xlabel("Product ID")
+        ax3.set_xticks(x)
+        ax3.set_xticklabels(
+            product_metrics_viz.index.astype(str),
+            rotation=45,
+            ha="right"
+        )
+
+        ax3.set_ylabel("Amount")
+        ax3.legend()
+        ax3.grid(axis="y", linestyle="--", alpha=0.4)
+
+        plt.tight_layout()
+        st.pyplot(fig3)
+        plt.close(fig3)
+
+
+
+    # ---------- PLOT 4: Stock Sold vs Stock Damaged (Top 10 Products) ----------
+    with col4:
+        blue_title("Stock Sold vs Stock Damaged ")
+
+        stock_metrics = (
+            df.groupby("product_id")
+            .agg(
+                stock_sold=("stock_sold_qty", "sum"),
+                stock_damaged=("stock_damaged_qty", "sum")
+            )
+            .sort_values("stock_sold", ascending=False)
+            .head(20)
+        )
+
+        fig4, ax4 = plt.subplots(figsize=(7, 4))
+
+        x = np.arange(len(stock_metrics))
+        width = 0.35
+
+        ax4.bar(x - width/2, stock_metrics["stock_sold"], width, label="Stock Sold")
+        ax4.bar(x + width/2, stock_metrics["stock_damaged"], width, label="Stock Damaged")
+        ax4.set_xlabel("Product ID")
+        ax4.set_xticks(x)
+        ax4.set_xticklabels(stock_metrics.index.astype(str), rotation=45,ha="right")
+        ax4.set_ylabel("Quantity")
+        ax4.legend()
+        ax4.grid(axis="y", linestyle="--", alpha=0.4)
+
+        st.pyplot(fig4)
+        plt.close(fig4)
+
+
+elif eda_option == "Customer-Level Analysis":
+
+    # =========================================================
+    # INTRO / CONTEXT CARD
+    # =========================================================
+    st.markdown(
+    """
+    <div style="
+        background-color:#2F75B5;
+        padding:28px;
+        border-radius:12px;
+        color:white;
+        font-size:16px;
+        line-height:1.6;
+        margin-bottom:20px;
+    ">
+    <b>What this section does:</b>
+
+    This section analyzes <b>customer behavior and value patterns</b>.
+
+    It focuses on:
+    <ul>
+        <li>Customer spending and purchase frequency</li>
+        <li>Loyalty engagement and retention signals</li>
+        <li>High-value vs low-value customer segments</li>
+    </ul><br>
+
+    <b>Why this matters:</b>
+    <li>Customer demand is not uniform. Some customers are frequent, loyal, and high-value,
+    while others are occasional or price-sensitive.</li><br>
+
+    <b>Key insights users get:</b>
+    <ul>
+        <li>Identification of high-value customers</li>
+        <li>Understanding loyalty effectiveness</li>
+        <li>Signals for churn risk and retention planning</li>
+    </ul>
+
+    </div>
+    """,
+    unsafe_allow_html=True
+    )
+
+    # =========================================================
+    # CUSTOMER METRICS AGGREGATION
+    # =========================================================
+    col_customer = "customer_id"
+
+    customer_metrics = (
+        df.groupby(col_customer)
+        .agg(
+            total_revenue=("total_sales_amount", "sum"),
+            total_purchases=("customer_total_purchases", "max"),
+            total_visits=("customer_total_visits", "max"),
+            avg_purchase_value=("customer_avg_purchase_value", "mean"),
+            loyalty_points_earned=("customer_loyalty_points_earned", "sum"),
+            satisfaction_score=("customer_satisfaction_score", "mean"),
+            days_since_last_purchase=("customer_days_since_last_purchase", "mean")
+        )
+    )
+
+    TOP_N = 20
+    top_customers = customer_metrics.sort_values(
+        "total_revenue", ascending=False
+    ).head(TOP_N)
+
+    # =========================================================
+    # BLUE TITLE BOX HELPER
+    # =========================================================
+    def blue_title(title):
+        st.markdown(
+            f"""
+            <div style="
+                background-color:#2F75B5;
+                padding:14px;
+                border-radius:8px;
+                font-size:16px;
+                color:white;
+                margin-bottom:8px;
+                text-align:center;
+                font-weight:600;
+            ">
+                {title}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # =========================================================
+    # ROW 1 — CUSTOMER VALUE & FREQUENCY
+    # =========================================================
+    col1, col2 = st.columns(2)
+    # ---------- PLOT 1: Revenue Contribution by Customer ----------
+    with col1:
+        blue_title("Revenue Contribution by Customer ")
+
+        fig1, ax1 = plt.subplots(figsize=(7, 4))
+
+        x = np.arange(len(top_customers))
+
+        ax1.bar(
+            x,
+            top_customers["total_revenue"]
+        )
+
+        ax1.set_xlabel("Customer ID")
+        ax1.set_ylabel("Total Revenue")
+
+        ax1.set_xticks(x)
+        ax1.set_xticklabels(
+            top_customers.index.astype(str),
+            rotation=45,
+            ha="right"
+        )
+
+        st.pyplot(fig1)
+        plt.close(fig1)
    
-    axes[1].set_xlabel("Store ID")
-    axes[1].set_ylabel("Revenue")
-    axes[1].set_xticks(x + bar_width * len(revenue_pivot.columns) / 2)
-    axes[1].set_xticklabels(revenue_pivot.index.astype(str), rotation=90)
-    axes[1].legend(
-    title="Product",
-    fontsize=8,
-    bbox_to_anchor=(1.02, 1),
-    loc="upper left"
-)
-    axes[1].grid(axis="y", linestyle="--", alpha=0.4)
+    # ---------- 2D BAR: Avg Order Value vs Discount Dependency ----------
+    with col2:
+        blue_title("Customer Order Value vs Discount Dependency")
 
-    plt.tight_layout()
-    st.pyplot(fig)
+        customer_discount_metrics = (
+            df.groupby("customer_id")
+            .agg(
+                avg_order_value=("avg_order_value", "mean"),
+                avg_discount=("discount_applied", "mean")
+            )
+            .dropna()
+        )
+
+        # Select top customers by order value
+        top_customers = (
+            customer_discount_metrics
+            .sort_values("avg_order_value", ascending=False)
+            .head(20)
+        )
+
+        x = np.arange(len(top_customers))
+        width = 0.35
+
+        fig, ax = plt.subplots(figsize=(7, 4))
+
+        # Bar 1 — Average Order Value
+        ax.bar(
+            x - width/2,
+            top_customers["avg_order_value"],
+            width,
+            label="Avg Order Value",
+            color="#1f77b4"
+        )
+
+        # Bar 2 — Average Discount Applied
+        ax.bar(
+            x + width/2,
+            top_customers["avg_discount"],
+            width,
+            label="Avg Discount Applied",
+            color="#ff7f0e"
+        )
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(
+            top_customers.index.astype(str),
+            rotation=45,
+            ha="right"
+        )
+
+        ax.set_ylabel("Amount")
+        ax.set_xlabel("Customer ID")
+        ax.legend()
+        ax.grid(axis="y", linestyle="--", alpha=0.4)
+
+        plt.tight_layout()
+        st.pyplot(fig)
+        plt.close(fig)
+
+
+
+    # =========================================================
+    # ROW 2 — LOYALTY & RETENTION SIGNALS
+    # =========================================================
+    col3, col4 = st.columns(2)
+
+   # ---------- PLOT 3: Revenue vs Loyalty Contribution (%) ----------
+    with col3:
+        blue_title("Revenue vs Loyalty Contribution (%)")
+
+        # Top customers by revenue
+        top_loyal_customers = (
+            customer_metrics
+            .sort_values("total_revenue", ascending=False)
+            .head(20)
+            .copy()
+        )
+
+        # Convert to percentage contribution
+        top_loyal_customers["revenue_pct"] = (
+            top_loyal_customers["total_revenue"]
+            / top_loyal_customers["total_revenue"].sum()
+        ) * 100
+
+        top_loyal_customers["loyalty_pct"] = (
+            top_loyal_customers["loyalty_points_earned"]
+            / top_loyal_customers["loyalty_points_earned"].sum()
+        ) * 100
+
+        fig, ax = plt.subplots(figsize=(7, 4))
+
+        x = np.arange(len(top_loyal_customers))
+        width = 0.35
+
+        # Revenue %
+        ax.bar(
+            x - width/2,
+            top_loyal_customers["revenue_pct"],
+            width,
+            label="Revenue Contribution (%)",
+            color="#1f77b4"
+        )
+
+        # Loyalty %
+        ax.bar(
+            x + width/2,
+            top_loyal_customers["loyalty_pct"],
+            width,
+            label="Loyalty Contribution (%)",
+            color="#ff7f0e"
+        )
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(
+            top_loyal_customers.index.astype(str),
+            rotation=45,
+            ha="right"
+        )
+        ax.set_xlabel("Customer ID")
+        ax.set_ylabel("Percentage Contribution (%)")
+        ax.legend()
+        ax.grid(axis="y", linestyle="--", alpha=0.4)
+
+        plt.tight_layout()
+        st.pyplot(fig)
+        plt.close(fig)
+
+
+    # ---------- PLOT 4: Customer Satisfaction vs Recency (Insightful) ----------
+    with col4:
+        blue_title("Customer Satisfaction vs Recency")
+
+        # Bucket recency
+        customer_metrics["recency_bucket"] = pd.cut(
+            customer_metrics["days_since_last_purchase"],
+            bins=[0, 30, 90, 180, 365],
+            labels=["0–30 Days", "31–90 Days", "91–180 Days", "181–365 Days"]
+        )
+
+        # Aggregate satisfaction + customer count
+        recency_summary = (
+            customer_metrics
+            .groupby("recency_bucket", observed=True)
+            .agg(
+                avg_satisfaction=("satisfaction_score", "mean"),
+                customer_count=("satisfaction_score", "count")
+            )
+        )
+
+        fig, ax = plt.subplots(figsize=(7, 4))
+
+        bars = ax.bar(
+            recency_summary.index.astype(str),
+            recency_summary["avg_satisfaction"]
+        )
+
+        ax.set_xlabel("Days Since Last Purchase")
+        ax.set_ylabel("Average Customer Satisfaction")
+        ax.set_ylim(0, 5)
+        ax.grid(axis="y", linestyle="--", alpha=0.4)
+
+        # ---- Add customer count labels ----
+        for bar, count in zip(bars, recency_summary["customer_count"]):
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + 0.05,
+                f"{count} customers",
+                ha="center",
+                fontsize=9
+            )
+
+
+        plt.tight_layout()
+        st.pyplot(fig)
+        plt.close(fig)
 
 
 elif eda_option == "Store-Level Analysis":
@@ -1400,110 +2040,228 @@ elif eda_option == "Store-Level Analysis":
     unsafe_allow_html=True
 )
 
+    # =========================================================
+    # BLUE TITLE BOX
+    # =========================================================
+    def blue_title(title):
+        st.markdown(
+            f"""
+            <div style="
+                background-color:#2F75B5;
+                padding:14px;
+                border-radius:8px;
+                font-size:16px;
+                color:white;
+                margin-bottom:8px;
+                text-align:center;
+                font-weight:600;
+            ">
+                {title}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
+    # =========================
+    # COLUMN MAPPING
+    # =========================
+    col_store   = "store_id"
+    col_product = "product_id"
+    col_qty     = "quantity_sold"
+    col_revenue = "total_sales_amount"
+    col_returns = "returns_quantity_returned"
 
-    # -----------------------------
-    # CONFIG
-    # -----------------------------
-    TOP_STORES = 10
-    TOP_PRODUCTS = 10
+    # =========================
+    # PARAMETERS
+    # =========================
+    TOP_STORES   = 20
+    TOP_PRODUCTS = 20
 
-    # -----------------------------
-    # FILTER TOP STORES & PRODUCTS
-    # -----------------------------
+    # =========================
+    # TOP STORES BY REVENUE
+    # =========================
     top_stores = (
-        df.groupby(col_store)[col_qty]
+        df.groupby(col_store)[col_revenue]
         .sum()
         .sort_values(ascending=False)
         .head(TOP_STORES)
         .index
     )
 
-    top_products = (
-        df.groupby(col_product)[col_qty]
+    # =========================
+    # STORE × PRODUCT QUANTITY
+    # =========================
+    store_product_qty = (
+        df[df[col_store].isin(top_stores)]
+        .groupby([col_store, col_product])[col_qty]
         .sum()
-        .sort_values(ascending=False)
-        .head(TOP_PRODUCTS)
-        .index
+        .reset_index()
     )
 
-    df_f = df[
-        df[col_store].isin(top_stores) &
-        df[col_product].isin(top_products)
-    ]
+    store_top_products = (
+        store_product_qty
+        .sort_values([col_store, col_qty], ascending=[True, False])
+        .groupby(col_store)
+        .head(TOP_PRODUCTS)
+    )
 
-    # -----------------------------
-    # PIVOT TABLES
-    # -----------------------------
-    units_pivot = df_f.pivot_table(
+    pivot_qty = store_top_products.pivot_table(
         index=col_store,
         columns=col_product,
         values=col_qty,
-        aggfunc="sum",
         fill_value=0
     )
 
-    revenue_pivot = df_f.pivot_table(
-        index=col_store,
-        columns=col_product,
-        values=col_rev,
-        aggfunc="sum",
-        fill_value=0
-    )
+    # =========================================================
+    # ROW 1 — EXISTING PLOTS (UNCHANGED)
+    # =========================================================
+    col1, col2 = st.columns(2)
 
-    # -----------------------------
-    # PLOT – SIDE BY SIDE
-    # -----------------------------
-    fig, axes = plt.subplots(1, 2, figsize=(16, 5), sharey=False)
+    # ---------- PLOT 1: Revenue Concentration (UNCHANGED) ----------
+    with col1:
+        blue_title("Revenue Concentration Across Stores")
 
-    x = np.arange(len(units_pivot.index))
-    bar_width = 0.8 / len(units_pivot.columns)
-
-    # -------- Units Sold --------
-    for i, product in enumerate(units_pivot.columns):
-        axes[0].bar(
-            x + i * bar_width,
-            units_pivot[product],
-            width=bar_width,
-            label=product
+        store_revenue = (
+            df.groupby(col_store)[col_revenue]
+            .sum()
+            .loc[top_stores]
         )
 
-    
-    axes[0].set_xlabel("Store")
-    axes[0].set_ylabel("Units Sold")
-    axes[0].set_xticks(x + bar_width * (len(units_pivot.columns) / 2))
-    axes[0].set_xticklabels(units_pivot.index, rotation=90)
-    axes[0].grid(axis="y", linestyle="--", alpha=0.4)
-    axes[0].legend(
-    title="Product",
-    fontsize=8,
-    bbox_to_anchor=(1.02, 1),
-    loc="upper left"
-)
+        fig1, ax1 = plt.subplots(figsize=(7, 4))
+        ax1.bar(store_revenue.index.astype(str), store_revenue.values)
+        ax1.set_xlabel("Store ID")
+        ax1.set_ylabel("Total Revenue")
+        ax1.tick_params(axis="x", rotation=45)
+        ax1.grid(axis="y", linestyle="--", alpha=0.4)
+        st.pyplot(fig1)
+        plt.close(fig1)
 
-    # -------- Revenue --------
-    for i, product in enumerate(revenue_pivot.columns):
-        axes[1].bar(
-            x + i * bar_width,
-            revenue_pivot[product],
-            width=bar_width,
-            label=product
+    # ---------- PLOT 2: Store-wise Product Mix (UNCHANGED) ----------
+    with col2:
+        blue_title("Store-wise Product Mix (Quantity Sold)")
+
+        fig2, ax2 = plt.subplots(figsize=(7, 4))
+        bottom = np.zeros(len(pivot_qty))
+
+        for product in pivot_qty.columns:
+            ax2.bar(
+                pivot_qty.index.astype(str),
+                pivot_qty[product],
+                bottom=bottom,
+                width=0.6,
+                label=str(product)
+            )
+            bottom += pivot_qty[product].values
+
+        ax2.set_xlabel("Store ID")
+        ax2.set_ylabel("Quantity Sold")
+
+        ax2.tick_params(axis="x", rotation=45)
+        for label in ax2.get_xticklabels():
+            label.set_ha("right")   # ✅ right align
+
+        ax2.grid(axis="y", linestyle="--", alpha=0.4)
+
+        ax2.legend(
+            title="Product ID",
+            bbox_to_anchor=(1.02, 1),
+            loc="upper left",
+            fontsize=8
         )
 
-    
-    axes[1].set_xlabel("Store")
-    axes[1].set_ylabel("Revenue")
-    axes[1].set_xticks(x + bar_width * (len(revenue_pivot.columns) / 2))
-    axes[1].set_xticklabels(revenue_pivot.index, rotation=90)
-    axes[1].grid(axis="y", linestyle="--", alpha=0.4)
-    axes[1].legend(
-    title="Product",
-    fontsize=8,
-    bbox_to_anchor=(1.02, 1),
-    loc="upper left")
+        st.pyplot(fig2)
+        plt.close(fig2)
 
-    plt.tight_layout()
-    st.pyplot(fig)
+
+    # =========================================================
+    # ROW 2 — NEW 2D BAR PLOTS (INSIGHTFUL)
+    # =========================================================
+    col3, col4 = st.columns(2)
+
+    # ---------- PLOT 3: Store Sales vs Returns ----------
+    with col3:
+        blue_title("Store Sales vs Returned Quantity")
+
+        store_returns = (
+            df.groupby(col_store)
+            .agg(
+                total_sales=(col_qty, "sum"),
+                total_returns=(col_returns, "sum")
+            )
+            .loc[top_stores]
+        )
+
+        x = np.arange(len(store_returns))
+        width = 0.35
+
+        fig3, ax3 = plt.subplots(figsize=(7, 4))
+        ax3.bar(x - width/2, store_returns["total_sales"], width, label="Units Sold")
+        ax3.bar(x + width/2, store_returns["total_returns"], width, label="Returned Units")
+
+        ax3.set_xticks(x)
+        ax3.set_xticklabels(store_returns.index.astype(str), rotation=45, ha="right")
+        ax3.set_ylabel("Quantity")
+        ax3.set_xlabel("Store ID")
+        ax3.legend()
+        ax3.grid(axis="y", linestyle="--", alpha=0.4)
+
+        st.pyplot(fig3)
+        plt.close(fig3)
+
+    # ---------- PLOT 4: Store Demand vs Revenue ----------
+    with col4:
+        blue_title("Units Sold vs Revenue")
+
+        store_efficiency = (
+            df.groupby(col_store)
+            .agg(
+                total_units_sold=(col_qty, "sum"),
+                total_revenue=(col_revenue, "sum")
+            )
+            .loc[top_stores]   # ✅ FIXED
+        )
+
+        x = np.arange(len(store_efficiency))
+        width = 0.35
+
+        fig4, ax1 = plt.subplots(figsize=(7, 4))
+
+        # Units Sold — LEFT AXIS
+        ax1.bar(
+            x - width / 2,
+            store_efficiency["total_units_sold"],
+            width,
+            label="Units Sold"
+        )
+        ax1.set_ylabel("Units Sold")
+
+        # Revenue — RIGHT AXIS
+        ax2 = ax1.twinx()
+        ax2.bar(
+            x + width / 2,
+            store_efficiency["total_revenue"],
+            width,
+            label="Revenue",
+            color="#ff7f0e"
+        )
+        ax2.set_ylabel("Revenue")
+        
+        ax1.set_xticks(x)
+        ax1.set_xticklabels(
+            store_efficiency.index.astype(str),
+            rotation=45,
+            ha="right"
+        )
+
+        # Combined legend
+        h1, l1 = ax1.get_legend_handles_labels()
+        h2, l2 = ax2.get_legend_handles_labels()
+        ax1.legend(h1 + h2, l1 + l2, loc="upper right")
+        ax1.set_xlabel("Store ID")
+        ax1.grid(axis="y", linestyle="--", alpha=0.4)
+
+        st.pyplot(fig4)
+        plt.close(fig4)
 
 
 elif eda_option == "Sales Channel Analysis":
@@ -1520,185 +2278,978 @@ elif eda_option == "Sales Channel Analysis":
         margin-bottom:20px;
     ">
 
-    <b>What this section does:</b>
+    <b>What this section does:</b><br><br>
 
-    This analyzes sales distribution across <b>different channels</b>, such as:
+    This provides a <b>high-level view of overall sales performance</b> across time,
+    products, and customers.
 
+
+    It evaluates:
     <ul>
-        <li>Online vs offline</li>
-        <li>Marketplace vs in-store</li>
-        <li>Direct vs third-party platforms</li>
-    </ul><br>
+        <li>Total sales revenue and volume</li>
+        <li>Sales trends over time</li>
+        <li>Overall demand patterns</li>
+    </ul>
+
 
     <b>Why this matters:</b>
 
-    Sales channels often have <b>distinct demand patterns</b>, pricing strategies,
-    and customer behaviors.<br>
+    Understanding overall sales behavior helps identify
+    <b>growth trends, seasonality, and demand fluctuations</b>.
+    It establishes a baseline before deeper analysis.
+
 
     <b>Key insights users get:</b>
     <ul>
-        <li>Channel-wise demand contribution</li>
-        <li>Channel volatility and stability</li>
-        <li>Whether forecasting should be channel-specific</li>
+        <li>Overall business performance trends</li>
+        <li>Periods of high and low sales activity</li>
+        <li>Inputs for forecasting and planning</li>
     </ul>
 
     </div>
     """,
     unsafe_allow_html=True
 )
+    
+    # =========================================================
+    # BLUE TITLE BOX
+    # =========================================================
+    def blue_title(title):
+        st.markdown(
+            f"""
+            <div style="
+                background-color:#2F75B5;
+                padding:14px;
+                border-radius:8px;
+                font-size:16px;
+                color:white;
+                margin-bottom:8px;
+                text-align:center;
+                font-weight:600;
+            ">
+                {title}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-    # -----------------------------
-    # CONFIG
-    # -----------------------------
-    TOP_STORES = 10
-    TOP_PRODUCTS = 10  # ⬅ reduce clutter (important for readability)
+    # =========================
+    # COLUMN MAPPING
+    # =========================
+    col_channel = "sales_channel_id"
+    col_revenue = "total_sales_amount"
+    col_aov     = "avg_order_value"
+    col_qty     = "quantity_sold"
 
-    # -----------------------------
-    # FILTER TOP STORES & PRODUCTS
-    # -----------------------------
-    top_stores = (
-        df.groupby(col_store)[col_qty]
+    # =========================
+    # PARAMETERS
+    # =========================
+    TOP_CHANNELS = 15
+
+    # =========================
+    # TOP CHANNELS BY REVENUE
+    # =========================
+    top_channels = (
+        df.groupby(col_channel)[col_revenue]
         .sum()
         .sort_values(ascending=False)
-        .head(TOP_STORES)
+        .head(TOP_CHANNELS)
         .index
     )
 
-    top_products = (
-        df.groupby(col_product)[col_qty]
-        .sum()
-        .sort_values(ascending=False)
-        .head(TOP_PRODUCTS)
-        .index
-    )
+    # =========================================================
+    # ROW 1 — EXISTING PLOTS (UNCHANGED LOGIC)
+    # =========================================================
+    col1, col2 = st.columns(2)
 
-    df_f = df[
-        df[col_store].isin(top_stores) &
-        df[col_product].isin(top_products)
-    ]
+    # ---------- PLOT 1: Revenue Contribution (DONUT – ORIGINAL CLEAN STYLE) ----------
+    with col1:
+        blue_title("Revenue Contribution by Sales Channel")
 
-    # -----------------------------
-    # PIVOT TABLES
-    # -----------------------------
-    units_pivot = df_f.pivot_table(
-        index=col_store,
-        columns=col_product,
-        values=col_qty,
-        aggfunc="sum",
-        fill_value=0
-    )
-
-    revenue_pivot = df_f.pivot_table(
-        index=col_store,
-        columns=col_product,
-        values=col_rev,
-        aggfunc="sum",
-        fill_value=0
-    )
-
-    # -----------------------------
-    # PLOT – SIDE BY SIDE
-    # -----------------------------
-    fig, axes = plt.subplots(1, 2, figsize=(16, 5))
-
-    x = np.arange(len(units_pivot.index))
-    n_products = len(units_pivot.columns)
-    bar_width = 0.75 / n_products
-
-    # -------- Units Sold --------
-    for i, product in enumerate(units_pivot.columns):
-        axes[0].bar(
-            x + i * bar_width,
-            units_pivot[product].values,
-            width=bar_width,
-            label=str(product)
+        channel_revenue = (
+            df.groupby(col_channel)[col_revenue]
+            .sum()
+            .loc[top_channels]
         )
 
-    axes[0].set_xlabel("Store ID")
-    axes[0].set_ylabel("Units Sold")
-    axes[0].set_xticks(x + bar_width * (n_products / 2))
-    axes[0].set_xticklabels(units_pivot.index, rotation=90)
-    axes[0].grid(axis="y", linestyle="--", alpha=0.4)
-    axes[0].legend(
-        title="Product",
-        fontsize=8,
-        bbox_to_anchor=(1.02, 1),
-        loc="upper left"
-    )
+        fig1, ax1 = plt.subplots(figsize=(3, 3))  # ⬅ balanced size like old image
 
-    # -------- Revenue --------
-    for i, product in enumerate(revenue_pivot.columns):
-        axes[1].bar(
-            x + i * bar_width,
-            revenue_pivot[product].values,
-            width=bar_width,
-            label=str(product)
+        wedges, texts, autotexts = ax1.pie(
+            channel_revenue.values,
+            labels=channel_revenue.index.astype(str),
+            autopct="%1.1f%%",
+            startangle=90,
+            colors=plt.cm.tab10.colors,
+            wedgeprops={
+                "width": 0.45,          # ⬅ ORIGINAL thickness
+                "edgecolor": "white"
+            },
+            pctdistance=0.75           # ⬅ ORIGINAL % placement
         )
 
-    axes[1].set_xlabel("Store ID")
-    axes[1].set_ylabel("Revenue")
-    axes[1].set_xticks(x + bar_width * (n_products / 2))
-    axes[1].set_xticklabels(revenue_pivot.index, rotation=90)
-    axes[1].grid(axis="y", linestyle="--", alpha=0.4)
-    axes[1].legend(
-        title="Product",
-        fontsize=8,
-        bbox_to_anchor=(1.02, 1),
-        loc="upper left"
-    )
+        # Percentage labels (inside)
+        for t in autotexts:
+            t.set_fontsize(5)
+            t.set_color("black")
 
-    plt.tight_layout()
-    st.pyplot(fig)
+        # Channel labels (outside)
+        for t in texts:
+            t.set_fontsize(5)
 
+        ax1.set_aspect("equal")       # perfect donut
+
+        st.pyplot(fig1)
+        plt.close(fig1)
+
+
+
+
+    # ---------- PLOT 2: Average Order Value (DOT – LABELED) ----------
+    with col2:
+        blue_title("Average Order Value by Sales Channel")
+
+        aov_values = [
+            df[df[col_channel] == ch][col_aov].mean()
+            for ch in top_channels
+        ]
+
+        fig2, ax2 = plt.subplots(figsize=(7, 4))
+
+        ax2.scatter(
+            top_channels.astype(str),
+            aov_values,
+            s=90,
+            alpha=0.85
+        )
+
+        # ---- Label each bubble ----
+        for x, y in zip(top_channels.astype(str), aov_values):
+            ax2.text(
+                x,
+                y + (max(aov_values) * 0.02),  # slight vertical offset
+                f"{int(y)}",
+                ha="center",
+                va="bottom",
+                fontsize=9,
+                color="black"
+            )
+
+        ax2.set_xlabel("Sales Channel")
+        ax2.set_ylabel("Average Order Value")
+
+        ax2.tick_params(axis="x", rotation=45)
+        for label in ax2.get_xticklabels():
+            label.set_ha("right")
+
+        ax2.grid(axis="y", linestyle="--", alpha=0.4)
+
+        st.pyplot(fig2)
+        plt.close(fig2)
+
+
+    # =========================================================
+    # ROW 2 — NEW 2D BAR PLOTS (INSIGHTFUL)
+    # =========================================================
+    col3, col4 = st.columns(2)
+
+    # ---------- PLOT: Units Sold vs Revenue by Sales Channel ----------
+    with col3:
+        blue_title("Units Sold vs Revenue by Sales Channel")
+
+        channel_volume = (
+            df.groupby(col_channel)
+            .agg(
+                total_units_sold=(col_qty, "sum"),
+                total_revenue=(col_revenue, "sum")
+            )
+            .loc[top_channels]
+        )
+
+        x = np.arange(len(channel_volume))
+        width = 0.35
+
+        fig, ax1 = plt.subplots(figsize=(7, 4))
+
+        # ---- Units Sold (LEFT AXIS) ----
+        bars1 = ax1.bar(
+            x - width/2,
+            channel_volume["total_units_sold"],
+            width,
+            label="Units Sold",
+            color="#1f77b4"
+        )
+        ax1.set_ylabel("Units Sold")
+
+        # ---- Revenue (RIGHT AXIS) ----
+        ax2 = ax1.twinx()
+        bars2 = ax2.bar(
+            x + width/2,
+            channel_volume["total_revenue"],
+            width,
+            label="Revenue",
+            color="#ff7f0e"
+        )
+        ax2.set_ylabel("Revenue")
+
+        # ---- X Axis ----
+        ax1.set_xticks(x)
+        ax1.set_xticklabels(
+            channel_volume.index.astype(str),
+            rotation=45,
+            ha="right"
+        )
+        ax1.set_xlabel("Sales Channel")
+
+  
+        # ---- Combined legend ----
+        h1, l1 = ax1.get_legend_handles_labels()
+        h2, l2 = ax2.get_legend_handles_labels()
+        ax1.legend(h1 + h2, l1 + l2, loc="upper right")
+
+        ax1.grid(axis="y", linestyle="--", alpha=0.4)
+
+        st.pyplot(fig)
+        plt.close(fig)
+    # ---------- 2D BAR: Revenue vs Profit by Sales Channel ----------
+    with col4:
+        blue_title("Sales Channel Revenue vs Profit")
+
+        channel_finance = (
+            df.groupby(col_channel)
+            .agg(
+                total_revenue=(col_revenue, "sum"),
+                total_profit=("profit_value", "sum")   # <-- ensure this column exists
+            )
+            .sort_values("total_revenue", ascending=False)
+            .head(15)
+        )
+
+        x = np.arange(len(channel_finance))
+        width = 0.35
+
+        fig, ax = plt.subplots(figsize=(8, 4))
+
+        ax.bar(
+            x - width/2,
+            channel_finance["total_revenue"],
+            width,
+            label="Total Revenue"
+        )
+
+        ax.bar(
+            x + width/2,
+            channel_finance["total_profit"],
+            width,
+            label="Total Profit"
+        )
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(channel_finance.index.astype(str),rotation=45,
+        ha="right"
+)
+        ax.set_xlabel("Sales Channel")
+        ax.set_ylabel("Amount")
+        ax.legend()
+        ax.grid(axis="y", linestyle="--", alpha=0.4)
+
+        st.pyplot(fig)
+        plt.close(fig)
 
 elif eda_option == "Promotion Effectiveness":
 
-    if col_promo:
-        st.subheader("Transactions under Promotions")
-        st.dataframe(df[col_promo].value_counts().head(10))
+    st.markdown(
+    """
+    <div style="
+        background-color:#2F75B5;
+        padding:28px;
+        border-radius:12px;
+        color:white;
+        font-size:16px;
+        line-height:1.6;
+        margin-bottom:20px;
+    ">
 
-    if col_promo and col_rev:
-        st.subheader("Revenue under Promotions")
-        st.dataframe(
-            df.groupby(col_promo)[col_rev]
-            .sum()
-            .sort_values(ascending=False)
-            .head(10)
+    <b>What this section does:</b><br><br>
+
+    This analyzes how <b>promotions impact sales performance</b> by comparing
+    promotion cost, sales uplift, and profitability.
+
+    It evaluates:
+    <ul>
+        <li>Revenue uplift generated by promotions</li>
+        <li>Promotion cost vs sales impact</li>
+        <li>Effectiveness of individual promotions</li>
+    </ul>
+    <br>
+
+    <b>Why this matters:</b>
+
+    Promotions can increase sales but may also reduce margins.
+    This analysis helps ensure promotions are
+    <b>cost-effective and profitable</b>.
+
+    <b>Key insights users get:</b>
+    <ul>
+        <li>High-performing vs underperforming promotions</li>
+        <li>Which promotions should be scaled or stopped</li>
+        <li>Better data-driven promotion planning</li>
+    </ul>
+
+    </div>
+    """,
+    unsafe_allow_html=True
+    )
+
+        # =========================================================
+    # BLUE TITLE BOX (REUSE SAME FUNCTION)
+    # =========================================================
+    def blue_title(title):
+        st.markdown(
+            f"""
+            <div style="
+                background-color:#2F75B5;
+                padding:14px;
+                border-radius:8px;
+                font-size:16px;
+                color:white;
+                margin-bottom:8px;
+                text-align:center;
+                font-weight:600;
+            ">
+                {title}
+            </div>
+            """,
+            unsafe_allow_html=True
         )
+
+    # =========================
+    # COLUMN MAPPING
+    # =========================
+    col_promo   = "promo_transaction_id"
+    col_sales   = "promo_total_sales_amount"
+    col_cost    = "promo_promo_cost"
+    col_uplift  = "promo_promo_uplift_revenue"
+    col_total_sales = "total_sales_amount"
+
+    # =========================
+    # AGGREGATE PROMOTION METRICS (UNCHANGED LOGIC)
+    # =========================
+    promo_metrics = (
+        df[df[col_promo].notna()]
+        .groupby(col_promo)
+        .agg(
+            promo_total_sales_amount=(col_sales, "sum"),
+            promo_cost=(col_cost, "sum"),
+            uplift_revenue=(col_uplift, "sum")
+        )
+    )
+
+    promo_metrics["net_uplift"] = (
+        promo_metrics["uplift_revenue"] - promo_metrics["promo_cost"]
+    )
+
+    promo_metrics = (
+        promo_metrics
+        .replace([np.inf, -np.inf], np.nan)
+        .dropna()
+    )
+
+    TOP_N = 20
+    top_promos = (
+        promo_metrics
+        .sort_values("net_uplift", ascending=False)
+        .head(TOP_N)
+    )
+
+    # =========================================================
+    # ROW 1 — EXISTING PLOTS (SAME LOGIC, NEW LAYOUT)
+    # =========================================================
+    col1, col2 = st.columns(2)
+
+    # ---------- PLOT 1: PROMOTION PROFITABILITY ----------
+    with col1:
+        blue_title("Promotion Profitability (Net Uplift Revenue)")
+
+        fig, ax = plt.subplots(figsize=(7, 4))
+
+        ax.bar(
+            top_promos.index.astype(str),
+            top_promos["net_uplift"],
+            alpha=0.85
+        )
+
+        ax.axhline(0, color="black", linewidth=1)
+        ax.set_xlabel("Promotion ID")
+        ax.set_ylabel("Net Uplift Revenue")
+        ax.tick_params(axis="x", rotation=45)
+        ax.grid(axis="y", linestyle="--", alpha=0.4)
+
+        st.pyplot(fig)
+        plt.close(fig)
+
+    # ---------- PLOT 2: SALES vs COST ----------
+    with col2:
+        blue_title("Promotion Effectiveness: Sales vs Cost")
+
+        fig, ax = plt.subplots(figsize=(7, 4))
+
+        ax.scatter(
+            top_promos["promo_cost"],
+            top_promos["promo_total_sales_amount"],
+            s=top_promos["promo_total_sales_amount"] / 1500,
+            alpha=0.75,
+            edgecolors="black",
+            linewidth=0.5
+        )
+
+        max_cost = top_promos["promo_cost"].max()
+        ax.plot(
+            [0, max_cost],
+            [0, max_cost],
+            linestyle="--",
+            color="gray",
+            alpha=0.4
+        )
+
+        top_labels = top_promos.sort_values(
+            "promo_total_sales_amount", ascending=False
+        ).head(10)
+
+        for pid, row in top_labels.iterrows():
+            ax.annotate(
+                pid,
+                (row["promo_cost"], row["promo_total_sales_amount"]),
+                xytext=(6, 6),
+                textcoords="offset points",
+                fontsize=9,
+            )
+
+        ax.set_xlabel("Promotion Cost")
+        ax.set_ylabel("Promotion Total Sales Amount")
+        ax.grid(True, linestyle="--", alpha=0.3)
+
+        st.pyplot(fig)
+        plt.close(fig)
+
+    # =========================================================
+    # ROW 2 — NEW 2D BAR PLOTS (INSIGHT-DRIVEN)
+    # =========================================================
+    col3, col4 = st.columns(2)
+
+    # ---------- PLOT: PROMOTION EFFECT ON QUANTITY SOLD vs RETURNS ----------
+    with col3:
+        blue_title("Promotion Effect on Quantity Sold vs Returns (Quality Check)")
+
+        # ---- COLUMN MAPPING ----
+        col_promo = "promo_transaction_id"
+        col_qty_sold = "promo_total_quantity_sold"
+        col_qty_returned = "returns_quantity_returned"
+
+        # ---- AGGREGATE PROMO-LEVEL QUANTITIES ----
+        promo_qty = (
+            df[df[col_promo].notna()]
+            .groupby(col_promo)
+            .agg(
+                total_quantity_sold=(col_qty_sold, "sum"),
+                total_quantity_returned=(col_qty_returned, "sum")
+            )
+            .replace([np.inf, -np.inf], np.nan)
+            .dropna()
+        )
+
+        # ---- SELECT TOP PROMOTIONS (BY SOLD QTY) ----
+        TOP_N = 15   # you can set 5–10
+        top_promo_qty = (
+            promo_qty
+            .sort_values("total_quantity_sold", ascending=False)
+            .head(TOP_N)
+        )
+
+        # ---- BAR PLOT ----
+        x = np.arange(len(top_promo_qty))
+        width = 0.35
+
+        fig, ax = plt.subplots(figsize=(8, 4))
+
+        ax.bar(
+            x - width/2,
+            top_promo_qty["total_quantity_sold"],
+            width,
+            label="Quantity Sold"
+        )
+
+        ax.bar(
+            x + width/2,
+            top_promo_qty["total_quantity_returned"],
+            width,
+            label="Quantity Returned"
+        )
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(
+            top_promo_qty.index.astype(str),
+            rotation=45,
+            ha="right"
+        )
+
+        ax.set_xlabel("Promotion ID")
+        ax.set_ylabel("Quantity")
+        ax.legend()
+        ax.grid(axis="y", linestyle="--", alpha=0.4)
+
+        st.pyplot(fig)
+        plt.close(fig)
+
+
+
+
+    # ---------- PLOT 4: PROMO COST vs UPLIFT REVENUE ----------
+    with col4:
+        blue_title("Promotion Cost vs Revenue Uplift")
+
+        promo_compare = (
+            promo_metrics
+            .sort_values("uplift_revenue", ascending=False)
+            .head(15)
+        )
+
+        x = np.arange(len(promo_compare))
+        width = 0.35
+
+        fig, ax = plt.subplots(figsize=(7, 4))
+
+        ax.bar(
+            x - width/2,
+            promo_compare["promo_cost"],
+            width,
+            label="Promotion Cost"
+        )
+
+        ax.bar(
+            x + width/2,
+            promo_compare["uplift_revenue"],
+            width,
+            label="Uplift Revenue"
+        )
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(
+            promo_compare.index.astype(str),
+            rotation=45,
+            ha="right"
+        )
+
+        ax.set_xlabel("Promotion ID")
+        ax.set_ylabel("Amount")
+        ax.legend()
+        ax.grid(axis="y", linestyle="--", alpha=0.4)
+
+        st.pyplot(fig)
+        plt.close(fig)
+
 
 elif eda_option == "Event Impact Analysis":
 
-    if col_event:
-        st.subheader("Transactions per Event")
-        st.dataframe(df[col_event].value_counts().head(10))
+    st.markdown(
+    """
+    <div style="
+        background-color:#2F75B5;
+        padding:28px;
+        border-radius:12px;
+        color:white;
+        font-size:16px;
+        line-height:1.6;
+        margin-bottom:20px;
+    ">
 
-    if col_event and col_rev:
-        st.subheader("Revenue Impact by Event")
-        st.dataframe(
-            df.groupby(col_event)[col_rev]
-            .sum()
-            .sort_values(ascending=False)
-            .head(10)
+    <b>What this section does:</b><br><br>
+
+    This analyzes how <b>special events</b> (festivals, campaigns, external factors)
+    influence <b>sales performance and demand patterns</b>.<br><br>
+
+    <b>Why this matters:</b><br><br>
+
+    Events can create <b>temporary demand spikes</b>, alter customer behavior,
+    and affect forecasting accuracy if not modeled correctly.<br><br>
+
+    <b>Key insights users get:</b>
+    <ul>
+        <li>Which events drive the highest sales uplift</li>
+        <li>How strongly events impact revenue vs cost</li>
+        <li>Which events are worth planning inventory for</li>
+    </ul>
+
+    </div>
+    """,
+    unsafe_allow_html=True
+    )
+
+    # =========================================================
+    # BLUE TITLE BOX
+    # =========================================================
+    def blue_title(title):
+        st.markdown(
+            f"""
+            <div style="
+                background-color:#2F75B5;
+                padding:14px;
+                border-radius:8px;
+                font-size:16px;
+                color:white;
+                margin-bottom:8px;
+                text-align:center;
+                font-weight:600;
+            ">
+                {title}
+            </div>
+            """,
+            unsafe_allow_html=True
         )
 
-elif eda_option == "Top Correlated Features":
+    # =========================
+    # COLUMN MAPPING
+    # =========================
+    col_event       = "event_id"
+    col_sales       = "total_sales_amount"
+    col_qty         = "quantity_sold"
+    col_before      = "impact_sales_before_impact"
+    col_after       = "impact_sales_after_impact"
+    col_change_pct  = "impact_impact_percentage_change"
 
-    if num_df.shape[1] < 2:
-        st.info("Not enough numeric columns for correlation.")
-    else:
-        st.dataframe(num_df.corr())
+    # Optional influence columns (only used in Plot 4)
+    col_weather = "impact_weather_influence_score"
+    col_trend   = "impact_trend_influence_score"
+
+    # =========================
+    # AGGREGATE EVENT METRICS (UNCHANGED LOGIC)
+    # =========================
+    event_metrics = (
+        df[df[col_event].notna()]
+        .groupby(col_event)
+        .agg(
+            sales_before=(col_before, "mean"),
+            sales_after=(col_after, "mean"),
+            total_sales=(col_sales, "sum"),
+            total_quantity=(col_qty, "sum"),
+            impact_pct=(col_change_pct, "mean"),
+            weather_score=(col_weather, "mean"),
+            trend_score=(col_trend, "mean")
+        )
+    )
+
+    # =========================
+    # DERIVED METRICS
+    # =========================
+    event_metrics["sales_uplift"] = (
+        event_metrics["sales_after"] - event_metrics["sales_before"]
+    )
+
+    event_metrics = (
+        event_metrics
+        .replace([np.inf, -np.inf], np.nan)
+        .dropna()
+    )
+
+    # =========================
+    # SELECT TOP EVENTS
+    # =========================
+    TOP_N = 15
+    top_events = (
+        event_metrics
+        .sort_values("sales_uplift", ascending=False)
+        .head(TOP_N)
+    )
+
+    # =========================================================
+    # ROW 1 — EXISTING PLOTS (NO LOGIC CHANGE)
+    # =========================================================
+    col1, col2 = st.columns(2)
+
+    # ---------- PLOT 1: EVENT SALES UPLIFT ----------
+    with col1:
+        blue_title("Event Sales Uplift ")
+
+        fig, ax = plt.subplots(figsize=(7, 4))
+
+        ax.bar(
+            top_events.index.astype(str),
+            top_events["sales_uplift"],
+            alpha=0.85
+        )
+
+        ax.axhline(0, color="black", linewidth=1)
+        ax.set_xlabel("Event ID")
+        ax.set_ylabel("Average Sales Uplift")
+        ax.tick_params(axis="x", rotation=45)
+        ax.grid(axis="y", linestyle="--", alpha=0.4)
+
+        st.pyplot(fig)
+        plt.close(fig)
+
+    # ---------- PLOT 2: EVENT EFFECTIVENESS (VOLUME vs IMPACT %) ----------
+    with col2:
+        blue_title("Event Effectiveness: Demand vs Impact")
+
+        fig, ax = plt.subplots(figsize=(7, 4))
+
+        ax.scatter(
+            top_events["total_quantity"],
+            top_events["impact_pct"],
+            s=top_events["total_sales"] / 1500,
+            alpha=0.75,
+            edgecolors="black",
+            linewidth=0.5
+        )
+
+        ax.axvline(top_events["total_quantity"].median(), linestyle="--", alpha=0.5)
+        ax.axhline(top_events["impact_pct"].median(), linestyle="--", alpha=0.5)
+
+        top_labels = top_events.sort_values(
+            "sales_uplift", ascending=False
+        ).head(7)
+
+        for eid, row in top_labels.iterrows():
+            ax.annotate(
+                eid,
+                (row["total_quantity"], row["impact_pct"]),
+                xytext=(6, 6),
+                textcoords="offset points",
+                fontsize=9
+            )
+
+        ax.set_xlabel("Total Quantity Sold During Event")
+        ax.set_ylabel("Average Sales Impact (%)")
+        ax.grid(True, linestyle="--", alpha=0.3)
+
+        st.pyplot(fig)
+        plt.close(fig)
+
+    # =========================================================
+    # ROW 2 — NEW 2D BAR PLOTS (INSIGHT-DRIVEN)
+    # =========================================================
+    col3, col4 = st.columns(2)
+
+    # ---------- PLOT 3: EVENT-WISE SALES BEFORE vs AFTER ----------
+    with col3:
+        blue_title("Event-wise Sales Before vs After Impact")
+
+        x = np.arange(len(top_events))
+        width = 0.35
+
+        fig, ax = plt.subplots(figsize=(8, 4))
+
+        ax.bar(
+            x - width/2,
+            top_events["sales_before"],
+            width,
+            label="Sales Before Event"
+        )
+
+        ax.bar(
+            x + width/2,
+            top_events["sales_after"],
+            width,
+            label="Sales After Event"
+        )
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(
+            top_events.index.astype(str),
+            rotation=45,
+            ha="right"
+        )
+
+        ax.set_xlabel("Event ID")
+        ax.set_ylabel("Average Sales Amount")
+        ax.legend()
+        ax.grid(axis="y", linestyle="--", alpha=0.4)
+
+        st.pyplot(fig)
+        plt.close(fig)
+
+    # ---------- PLOT 4: EVENT INFLUENCE BREAKDOWN ----------
+    with col4:
+        blue_title("Event Influence Breakdown (Weather vs Trend)")
+
+        x = np.arange(len(top_events))
+        width = 0.35
+
+        fig, ax = plt.subplots(figsize=(8, 4))
+
+        ax.bar(
+            x - width/2,
+            top_events["weather_score"],
+            width,
+            label="Weather Influence"
+        )
+
+        ax.bar(
+            x + width/2,
+            top_events["trend_score"],
+            width,
+            label="Trend Influence"
+        )
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(
+            top_events.index.astype(str),
+            rotation=45,
+            ha="right"
+        )
+
+        ax.set_xlabel("Event ID")
+        ax.set_ylabel("Influence Score")
+        ax.legend()
+        ax.grid(axis="y", linestyle="--", alpha=0.4)
+
+        st.pyplot(fig)
+        plt.close(fig)
+
 
 elif eda_option == "Summary Report":
 
-    st.json({
-        "Rows": df.shape[0],
-        "Columns": df.shape[1],
-        "Numeric Columns": num_df.shape[1],
-        "Total Revenue": df[col_rev].sum() if col_rev else None,
-        "Total Units Sold": int(df[col_qty].fillna(0).sum()) if col_qty else None,
-    })
+    # =========================
+    # SUMMARY REPORT – INTRO
+    # =========================
+    st.markdown(
+        """
+        <div style="
+            background-color:#2F75B5;
+            padding:28px;
+            border-radius:12px;
+            color:white;
+            font-size:16px;
+            line-height:1.6;
+            margin-bottom:25px;
+        ">
 
-    st.success("EDA Summary Generated ✔")
+        <b>What this section does:</b>
+
+        This provides a <b>consolidated narrative summary</b> of all EDA findings.
+
+        It highlights:
+        <ul>
+            <li>Key demand patterns</li>
+            <li>Major influencing factors</li>
+            <li>Data readiness for modelling</li>
+        </ul>
+
+        <b>Why this matters:</b>
+
+        Not all stakeholders want charts.<br>
+        This section translates analysis into <b>actionable understanding</b>.
+
+
+        <b>Key insights users get:</b>
+        <ul>
+            <li>A single, clear view of data insights</li>
+            <li>Business-ready conclusions</li>
+            <li>Readiness assessment for model engineering</li>
+        </ul>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+        # =========================
+    # FINAL EDA SUMMARY NARRATIVE (FULLY GROUNDED IN OUTPUTS)
+    # =========================
+    st.markdown(
+        """
+        <div style="
+            background-color:#0B2C5D;
+            padding:30px;
+            border-radius:12px;
+            color:white;
+            font-size:15px;
+            line-height:1.7;
+        ">
+
+        <h4>📊 Data Health & Readiness</h4>
+        <ul>
+            <li>The dataset consists of <b>942 rows and 96 columns</b>, offering rich coverage across products, customers, stores, channels, promotions, and events.</li>
+            <li><b>No duplicate records</b> were detected, ensuring transactional integrity.</li>
+            <li>Core identifiers (transaction, product, store, customer, sales channel, promotion) have <b>0% missing values</b>.</li>
+            <li>Data types are well balanced (categorical, numeric, datetime), confirming the dataset is <b>model-ready</b>.</li>
+        </ul>
+
+        <h4>💰 Overall Sales Performance</h4>
+        <ul>
+            <li>Sales over time exhibit <b>sharp spikes</b>, with several days exceeding <b>₹400K–₹600K</b>, indicating event-driven and promotional demand.</li>
+            <li>Revenue distribution is highly uneven, validating the need for deeper segmentation.</li>
+            <li>Store-wise and channel-wise sales confirm that a subset of entities drives the majority of revenue.</li>
+        </ul>
+
+        <h4>📦 Product-Level Insights</h4>
+        <ul>
+            <li>Revenue contribution is strongly concentrated — products such as <b>P_000034, P_000029, and P_000019</b> dominate total revenue.</li>
+            <li>Demand vs profitability analysis shows <b>no linear relationship</b> between volume and profit.</li>
+            <li>Products like <b>P_000050 and P_000058</b> achieve high profitability at moderate demand.</li>
+            <li>Discount-heavy products do not consistently yield higher revenue.</li>
+            <li>Stock damaged quantities for several top sellers reveal <b>operational loss exposure</b>.</li>
+        </ul>
+
+        <h4>👥 Customer-Level Behavior</h4>
+        <ul>
+            <li>A small group of customers contributes a <b>disproportionate share of revenue</b>, led by <b>C_000034 and C_000029</b>.</li>
+            <li>Loyalty contribution varies widely and does not scale proportionally with revenue.</li>
+            <li>High-value customers generally show <b>lower discount dependency</b>.</li>
+            <li>Customer satisfaction declines as inactivity increases, with the <b>181–365 day</b> segment showing the lowest satisfaction.</li>
+        </ul>
+
+        <h4>🏬 Store-Level Performance</h4>
+        <ul>
+            <li>Revenue is concentrated in a few stores, notably <b>S_000034 and S_000029</b>.</li>
+            <li>Store-wise product mix varies significantly, confirming <b>localized demand patterns</b>.</li>
+            <li>Some stores exhibit <b>high return volumes</b> relative to sales, indicating fulfillment or quality issues.</li>
+            <li>High unit sales do not always translate into proportional revenue, highlighting efficiency gaps.</li>
+        </ul>
+
+        <h4>🛒 Sales Channel Analysis</h4>
+        <ul>
+            <li>Revenue contribution is dominated by channels such as <b>CH_000034 (10.9%)</b> and <b>CH_000029 (10.0%)</b>.</li>
+            <li>Average order value varies significantly across channels, ranging roughly from <b>₹1.8K to ₹4.3K</b>.</li>
+            <li>Some channels generate high volume but lower profitability.</li>
+            <li>This confirms the need for <b>channel-specific pricing, promotion, and inventory strategies</b>.</li>
+        </ul>
+
+        <h4>🎯 Promotion Effectiveness</h4>
+        <ul>
+            <li>Promotion-level analysis shows that <b>not all high-cost promotions are profitable</b>.</li>
+            <li>Promotions such as <b>T_000044 and T_000024</b> generate the highest net uplift revenue.</li>
+            <li>Quantity sold vs returned analysis reveals promotions that drive volume but also increase returns.</li>
+            <li>Sales vs cost scatter clearly separates <b>efficient promotions from underperformers</b>.</li>
+        </ul>
+
+        <h4>🎉 Event Impact Analysis</h4>
+        <ul>
+            <li>Events consistently show <b>higher sales after impact</b> compared to before.</li>
+            <li>Events like <b>E_000028 and E_000039</b> produce the highest average sales uplift.</li>
+            <li>Demand vs impact analysis shows that <b>high demand does not always mean high impact</b>.</li>
+            <li>Influence breakdown reveals that some events are <b>trend-driven</b>, while others are <b>weather-sensitive</b>.</li>
+        </ul>
+
+        <h4>🔗 Cross-Dimensional Insights</h4>
+        <ul>
+            <li>Revenue and demand are concentrated across products, customers, stores, and channels.</li>
+            <li>Discounts, returns, and damaged stock act as <b>hidden profitability leakages</b>.</li>
+            <li>Events and promotions introduce strong non-linear effects on demand.</li>
+        </ul>
+
+        <h4>✅ Final Takeaway</h4>
+        <ul>
+            <li>The dataset is <b>clean, consistent, and enterprise-grade</b>.</li>
+            <li>Clear demand drivers and inefficiencies are observable across multiple dimensions.</li>
+            <li>Forecasting accuracy will significantly improve by modeling at <b>SKU × Store × Channel × Event × Promotion</b> levels.</li>
+            <li>The EDA strongly supports downstream use cases in <b>demand forecasting, inventory optimization, and promotion intelligence</b>.</li>
+        </ul>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 
 
 
