@@ -6,3 +6,4 @@ seaborn
 scikit-learn
 mysql-connector-python
 st_aggrid
+streamlit.components.v1 
