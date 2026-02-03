@@ -1,0 +1,174 @@
+SELECT 
+    F.*,
+
+    /*DIM CUSTOMER*/
+    C.Customer_Name,
+    C.Email,
+    C.Mobile,
+    C.Loyalty_Tier,
+    C.Gender,
+    C.Age,
+    C.Age_Group,
+    C.Income_Bracket,
+    C.City  AS customer_city,
+    C.Region AS customer_region,
+    C.Join_Date AS customer_join_date,
+
+    /* DIM PRODUCT */
+    P.SKU_Code,
+    P.Product_Name,
+    P.Brand,
+    P.Category,
+    P.Subcategory,
+    P.Supplier_ID,
+    P.Launch_Date,
+    P.Shelf_Life_Days,
+    P.Unit_Of_Measure,
+    P.Cost_Price,
+    P.MRP,
+    P.Status AS product_status,
+
+    /*DIM STORE*/
+    S.region       AS store_region,
+    S.zone         AS store_zone,
+    S.city         AS store_city,
+    S.country      AS store_country,
+    S.store_type,
+    S.store_name,
+    S.area_sqft,
+    S.opening_date,
+    S.manager_name,
+    S.contact_number AS store_phone,
+    S.operating_hours,
+    S.is_active AS store_active,
+
+    /*DIM SALES CHANNEL */
+    SC.channel_code,
+    SC.channel_name,
+    SC.channel_type,
+    SC.platform_name,
+    SC.region AS channel_region,
+    SC.is_online,
+    SC.commission_rate,
+    SC.contact_email AS channel_email,
+    SC.contact_number AS channel_phone,
+
+    /* DIM PROMOTION*/
+    PR.Promotion_Name,
+    PR.Promotion_Type,
+    PR.Start_Date AS promo_start,
+    PR.End_Date AS promo_end,
+    PR.Discount_Percent,
+    PR.Campaign_ID,
+    PR.Is_Active AS promo_active,
+
+    /*  DIM EVENT */
+    E.event_name,
+    E.event_type,
+    E.event_description,
+    E.start_date AS event_start,
+    E.end_date AS event_end,
+    E.region AS event_region,
+    E.category AS event_category,
+    E.expected_crowd_index,
+
+    /*  DIM TIME */
+    T.time_id,
+    T.date,
+    T.day,
+    T.week,
+    T.month,
+    T.quarter,
+    T.year,
+    T.weekday_name,
+    T.is_holiday,
+    T.is_weekend,
+
+    /*DIM VENDOR*/
+    V.vendor_name,
+    V.contact_person AS vendor_contact,
+    V.phone AS vendor_phone,
+    V.email AS vendor_email,
+    V.vendor_region,
+    V.preferred_payment_terms,
+    V.lead_time_days,
+    V.rating_score,
+
+    /*DIM WEATHER*/
+    W.weather_type,
+    W.region AS weather_region,
+    W.wind_speed_category,
+    W.city AS weather_city,
+    W.temperature,
+    W.rainfall,
+    W.humidity,
+    W.weather_condition,
+
+    /* DIM TREND*/
+    TR.start_period,
+    TR.end_period,
+    TR.trend_type,
+    TR.product_category AS trend_product_category,
+    TR.trend_score,
+    TR.region AS trend_region,
+
+    /* DIM INVENTORY STATUS (ERD)
+      FACT has no inventory_status_id
+      uses PRODUCT_ID*/
+    ISI.status_code,
+    ISI.status_description,
+    ISI.category AS inventory_category,
+    ISI.stock_condition,
+    ISI.availability AS inventory_availability,
+    ISI.restock_required,
+
+    /*DIM SAFETY STOCK (ERD)
+      FACT has no safety_stock_id
+     uses PRODUCT_ID + STORE_ID*/
+    SS.min_safety_qty,
+    SS.reorder_frequency_days,
+    SS.safety_stock_owner,
+    SS.last_review_date
+
+FROM fact_consolidated F
+
+/* EXACT ERD JOINS (Translated to Real Keys)*/
+
+LEFT JOIN dim_customer_populated          C 
+       ON F.customer_id          = C.Customer_ID
+
+LEFT JOIN dim_product_populated           P 
+       ON F.product_id           = P.Product_ID
+
+LEFT JOIN dim_store_populated             S 
+       ON F.store_id             = S.store_id
+
+LEFT JOIN dim_sales_channel_populated     SC  
+       ON F.sales_channel_id     = SC.sales_channel_id
+
+LEFT JOIN dim_promotion_populated         PR  
+       ON F.promo_id             = PR.Promotion_ID
+
+LEFT JOIN dim_event_populated             E   
+       ON F.event_id             = E.event_id
+
+LEFT JOIN dim_time_populated              T   
+       ON F.customer_time_id     = T.date_id   
+
+LEFT JOIN dim_vendor_populated            V   
+       ON F.reorder_vendor_id    = V.vendor_id
+
+LEFT JOIN dim_weather_populated           W   
+       ON F.impact_weather_influence_score = W.weather_id
+
+LEFT JOIN dim_trend_populated             TR  
+       ON F.impact_trend_influence_score  = TR.trend_id
+
+/* ERD INVENTORY → JOIN USING PRODUCT_ID */
+LEFT JOIN dim_inventory_status_populated  ISI 
+       ON F.product_id = ISI.product_id
+
+/* ERD SAFETY STOCK → JOIN USING PRODUCT_ID + STORE_ID */
+LEFT JOIN dim_safety_stock_populated      SS  
+       ON F.product_id = SS.product_id
+      AND F.store_id   = SS.store_id;

@@ -5,4 +5,8 @@ matplotlib
 seaborn
 scikit-learn
 mysql-connector-python
-
+st_aggrid
+plotly
+datetime
+plotly.express
+treamlit_plotly_events
