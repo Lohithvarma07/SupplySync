@@ -6,8 +6,7 @@ import matplotlib.pyplot as plt
 import io
 import numpy as np
 from utils.html_table import render_html_table
-import plotly.express as px
-from streamlit_plotly_events import plotly_events
+
 
 
 
