@@ -55,10 +55,10 @@ div.stRadio {
 }
 
 /* =========================================
-   GRAY WRAP BOX – FULL PAGE WIDTH
+   Teal WRAP BOX – FULL PAGE WIDTH
    ========================================= */
 div.stRadio > div {
-    background-color: #E6E6E6;
+    background-color:  #14B8A6;
     padding: 16px 400px;
     border-radius: 8px;
     width: 100%;              
@@ -76,11 +76,14 @@ div[data-baseweb="radio-group"] {
 /* =========================================
    RADIO OPTION TEXT
    ========================================= */
-div[data-baseweb="radio"] span {
+/* RADIO LABEL TEXT – FORCE WHITE */
+div[data-baseweb="radio"] label,
+div[data-baseweb="radio"] label span {
     font-size: 16px !important;
     font-weight: 600 !important;
-    color: #1F2937;
+    color: #FFFFFF !important;
 }
+
 
 /* =========================================
    SPACE BETWEEN OPTIONS
@@ -88,6 +91,8 @@ div[data-baseweb="radio"] span {
 div[data-baseweb="radio"] {
     margin-right: 28px;
 }
+
+          
 
 </style>
 """, unsafe_allow_html=True)
@@ -123,10 +128,11 @@ st.markdown("""
    ========================================= */
 .summary-grid {
     display: grid;
-    grid-template-columns: repeat(3, 200px);  /* 🔥 fixed equal width */
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 14px;
     margin: 6px 0 10px 0;
     justify-content: center;
+    
 }
 
 /* =========================================
@@ -145,7 +151,7 @@ st.markdown("""
    ========================================= */
 .summary-title {
     background-color: #9CA3AF;
-    color: #FFFFFF;
+    color: #000000;
     font-size: 14px;
     font-weight: 700;
     padding: 8px 6px;
@@ -364,7 +370,7 @@ df = st.session_state.df
 
 if df is not None:
     st.markdown(
-    "<h3 style='color:#000000;'>🔍 Data Preview</h3>",
+    "<h3 style='color:#000000;'>Data Preview</h3>",
     unsafe_allow_html=True
 )
 
@@ -460,6 +466,7 @@ step = st.radio(
     index=None,
     horizontal=True,
     label_visibility="collapsed"
+
 )
 
 
@@ -560,7 +567,7 @@ leading to <b>over-forecasting</b>.
         before_df = st.session_state.dup_before_df   # 🔒 frozen
         after_df = st.session_state.dup_after_df     # 🔒 frozen
         removed_df = st.session_state.dup_removed_df     
-        st.markdown("#### 🧾 Duplicate Removal Summary")
+        st.markdown("####  Duplicate Removal Summary")
 
         st.markdown("""
         <div class="summary-grid">
@@ -586,7 +593,7 @@ leading to <b>over-forecasting</b>.
         st.markdown("<br>", unsafe_allow_html=True)
         # ===== BEFORE =====
         st.markdown(
-            f"#### 📌 Before Duplicate Removal ({before_df.shape[0]} Rows)"
+            f"#### Before Duplicate Removal ({before_df.shape[0]} Rows)"
         )
         render_html_table(
             before_df,
@@ -598,7 +605,7 @@ leading to <b>over-forecasting</b>.
 
         # ===== AFTER =====
         st.markdown(
-            f"#### ✅ After Duplicate Removal ({after_df.shape[0]} Rows)"
+            f"####  After Duplicate Removal ({after_df.shape[0]} Rows)"
         )
         render_html_table(
             after_df,
@@ -610,7 +617,7 @@ leading to <b>over-forecasting</b>.
 
         # ===== REMOVED =====
         st.markdown(
-            f"#### ❌ Duplicates Removed ({removed_df.shape[0]} Rows)"
+            f"#### Duplicates Removed ({removed_df.shape[0]} Rows)"
         )
         render_html_table(
             removed_df,
@@ -763,7 +770,7 @@ if step == "Remove Outliers":
             st.session_state.df = after_df
             st.session_state.preprocessing_completed = True
 
-            st.success("✔ Outliers handled successfully (aggressive mode)")
+            st.success("Outliers handled successfully")
 
     # --------------------------------------------------
     # OUTPUT SECTION (UNCHANGED)
@@ -774,7 +781,7 @@ if step == "Remove Outliers":
         after_df = st.session_state.out_after_df
         removed_df = st.session_state.out_removed_df
 
-        st.markdown("#### 🧾 Outlier Removal Summary")
+        st.markdown("####  Outlier Removal Summary")
         st.markdown("""
         <div class="summary-grid">
             <div class="summary-card">
@@ -797,19 +804,19 @@ if step == "Remove Outliers":
         ), unsafe_allow_html=True)
 
             # ===== BEFORE =====
-        st.markdown(f"#### 📌 Before Outlier Handling ({before_df.shape[0]} Rows)")
+        st.markdown(f"#### Before Outlier Handling ({before_df.shape[0]} Rows)")
         render_html_table(before_df, max_height=300)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
         # ===== AFTER =====
-        st.markdown(f"#### ✅ After Outlier Handling ({after_df.shape[0]} Rows)")
+        st.markdown(f"#### After Outlier Handling ({after_df.shape[0]} Rows)")
         render_html_table(after_df, max_height=300)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
         # ===== REMOVED =====
-        st.markdown(f"#### ❌ Outliers Removed ({removed_df.shape[0]} Rows)")
+        st.markdown(f"####  Outliers Removed ({removed_df.shape[0]} Rows)")
         render_html_table(removed_df, max_height=300)
 
 
@@ -923,7 +930,7 @@ elif step == "Replace Missing Values":
                 affected_rows_before.index
             ].copy()
 
-            st.success("✔ NULL values replaced with 'Unknown'")
+            st.success(" NULL values replaced with 'Unknown'")
 
 
     # ------------------------------------------------------------
@@ -940,7 +947,7 @@ elif step == "Replace Missing Values":
         after_rows = st.session_state.null_after_rows
         replaced_cols = st.session_state.null_replaced_cols
         # ===================== COLUMNS =====================
-        st.markdown("#### 🧾 Columns Where NULL Values Were Replaced")
+        st.markdown("####  Columns Where NULL Values Were Replaced")
 
         if not replaced_cols.empty:
             value_col = replaced_cols.columns[0]
@@ -970,13 +977,13 @@ elif step == "Replace Missing Values":
 
         # ===================== BEFORE =====================
         st.markdown(
-            f"#### 📌 Rows Before Missing Values Replacement ({before_rows.shape[0]} Rows)"
+            f"#### Rows Before Missing Values Replacement ({before_rows.shape[0]} Rows)"
         )
         render_html_table(before_rows)
 
         # ===================== AFTER =====================
         st.markdown(
-            f"#### ✅ Rows After Missing Values Replacement ({after_rows.shape[0]} Rows)"
+            f"####  Rows After Missing Values Replacement ({after_rows.shape[0]} Rows)"
         )
         render_html_table(after_rows)
 
@@ -1259,6 +1266,12 @@ num_df = df.select_dtypes(include=np.number)
 # =========================
 
 st.markdown("### 📊 List of Analytics")
+st.markdown(
+    "<div style='margin-top:6px'></div>",
+    unsafe_allow_html=True
+)
+
+
 
 if "eda_option" not in st.session_state:
     st.session_state.eda_option = None
@@ -1288,8 +1301,6 @@ def nav_button(label, value):
         if st.button(label, use_container_width=True):
             st.session_state.eda_option = value
             st.rerun() 
-            
-# ---------- BUTTON GRID (IMAGE MATCH) ----------
 
 row1 = st.columns(5)
 row2 = st.columns(4)
@@ -1314,10 +1325,12 @@ with row2[2]:
 with row2[3]:
     nav_button("Summary Report", "Summary Report")
 
-
 eda_option = st.session_state.eda_option
 
-
+st.markdown(
+    "<div style='margin-top:6px'></div>",
+    unsafe_allow_html=True
+)
 
 if eda_option is None:
     st.info("👆 Select an analysis to view insights.")

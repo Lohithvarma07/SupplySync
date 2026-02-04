@@ -59,6 +59,7 @@ def render_html_table(
                 top: 0;
                 background-color: #F3F4F6;
                 font-weight: 600;
+                text-align: center !important;
                 color: #1F2937;
                 padding: 6px 8px;
                 border-bottom: 1px solid #D1D5DB;
@@ -69,6 +70,7 @@ def render_html_table(
                 padding: 3px 5px;
                 border-bottom: 1px solid #E5E7EB;
                 white-space: nowrap;
+                text-align: center !important;
             }}
 
             table.dataTable th,
