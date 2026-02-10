@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import io
 import numpy as np
 from utils.html_table import render_html_table
+import streamlit as st
+import altair as alt
 
 
 
@@ -54,10 +56,10 @@ div.stRadio {
 }
 
 /* =========================================
-   GRAY WRAP BOX – FULL PAGE WIDTH
+   Teal WRAP BOX – FULL PAGE WIDTH
    ========================================= */
 div.stRadio > div {
-    background-color: #E6E6E6;
+    background-color:  #0D9488;
     padding: 16px 400px;
     border-radius: 8px;
     width: 100%;              
@@ -75,11 +77,14 @@ div[data-baseweb="radio-group"] {
 /* =========================================
    RADIO OPTION TEXT
    ========================================= */
-div[data-baseweb="radio"] span {
-    font-size: 16px !important;
-    font-weight: 600 !important;
-    color: #1F2937;
+/* RADIO LABEL TEXT – FORCE WHITE */
+div[data-baseweb="radio"] label,
+div[data-baseweb="radio"] label span {
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    color: #FFFFFF !important;
 }
+
 
 /* =========================================
    SPACE BETWEEN OPTIONS
@@ -88,8 +93,31 @@ div[data-baseweb="radio"] {
     margin-right: 28px;
 }
 
+          
+
 </style>
 """, unsafe_allow_html=True)
+
+
+st.markdown(""" 
+ <style> /* Expander outer card */ 
+    div[data-testid="stExpander"]
+        { background-color: #2F75B5;
+        border-radius: 20px; 
+        border: 1px solid #9EDAD0; 
+        overflow: hidden; /* 🔑 fixes unfinished edges */ }
+    /* Hide expander header completely */
+    div[data-testid="stExpander"]:nth-of-type(1)
+             summary { display: none; }
+    /* Inner content padding fix */
+     div[data-testid="stExpander"]:nth-of-type(1) > 
+            div { padding: 22px 18px; } 
+            </style> """, unsafe_allow_html=True)
+
+
+
+
+
 
 
 st.markdown(
@@ -118,55 +146,77 @@ st.markdown("""
 <style>
 
 /* =========================================
-   SUMMARY GRID (TABLE-LIKE, COMPACT)
+   SUMMARY GRID (CENTERED, SMALL, EQUAL BOXES)
    ========================================= */
-
 .summary-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, max-content));
-    gap: 8px;                      /* tighter like tables */
-    margin: 10px 0 16px 0;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin: 6px 0 10px 0;
     justify-content: center;
+    
 }
 
 /* =========================================
-   SUMMARY CELL (TABLE STYLE)
+   SUMMARY CARD (TABLE CONTAINER)
    ========================================= */
-
 .summary-card {
-    background-color: #F9FAFB;     /* table header background */
-    border: 1px solid #D0D7DE;     /* thin table border */
-    border-radius: 0px;            /* sharp edges (table feel) */
-    padding: 10px 14px;            /* compact spacing */
+    border: 2px solid #6B7280;
+    border-radius: 2px;
+    background-color: #E5E7EB;
+    overflow: hidden;
     text-align: center;
-    min-width: 220px;
 }
 
 /* =========================================
-   HEADER TEXT (LIKE TABLE HEADER)
+   HEADER ROW (NO WRAP, SAME HEIGHT)
    ========================================= */
-
 .summary-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #57606A;                /* muted header color */
-    margin-bottom: 4px;
+    background-color: #9CA3AF;
+    color: #000000;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 8px 6px;
+    border-bottom: 1px solid #6B7280;
+
+    white-space: nowrap;       /* 🔥 stop wrapping */
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* =========================================
-   VALUE TEXT (TABLE CELL VALUE)
+   VALUE CELL (COMPACT)
    ========================================= */
-
 .summary-value {
-    font-size: 16px;
-    font-weight: 700;
-    color: #24292F;
+    font-size: 22px;
+    font-weight: 600;
+    color: #000000;
+    padding: 1px 0;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 
+st.markdown("""
+<style>
+/* Outer gray wrap */
+.gray-analytics-wrap {
+    background-color: #E6E6E6;
+    padding: 16px 400px;
+    border-radius: 8px;
+    width: 100%;              
+    box-sizing: border-box;
+}
+
+/* Inner blue analytics bar */
+.analytics-container {
+    background-color:#1F6FB2;
+    padding:18px;
+    border-radius:14px;
+}
+</style>
+""", unsafe_allow_html=True)
 
 
 
@@ -342,14 +392,15 @@ df = st.session_state.df
 
 if df is not None:
     st.markdown(
-    "<h3 style='color:#000000;'>🔍 Data Preview</h3>",
+    "<h3 style='color:#000000;'>Data Preview</h3>",
     unsafe_allow_html=True
 )
 
     render_html_table(
-        df.head(10),
-        height=260
+        df.head(20),
+        max_height=260
     )
+    
 
     st.info(f"**Shape:** {df.shape[0]} rows × {df.shape[1]} columns")
 else:
@@ -426,6 +477,8 @@ st.markdown(
     "</div>",
     unsafe_allow_html=True
 )
+st.write("")
+
 
 step = st.radio(
     "",
@@ -437,6 +490,7 @@ step = st.radio(
     index=None,
     horizontal=True,
     label_visibility="collapsed"
+
 )
 
 
@@ -447,6 +501,7 @@ step = st.radio(
 if step == "Remove Duplicate Rows":
 
     st.markdown("### Remove Duplicate Rows")
+    st.write("")
 
     st.markdown("""
 <div style="
@@ -496,7 +551,8 @@ leading to <b>over-forecasting</b>.
 
 
     if st.button("Apply Duplicate Row Removal"):
-
+        st.write("")
+        st.write("")
         # Prevent re-run
         if st.session_state.dup_removed_df is not None:
             st.info("Duplicate rows were already removed earlier.")
@@ -537,7 +593,8 @@ leading to <b>over-forecasting</b>.
         before_df = st.session_state.dup_before_df   # 🔒 frozen
         after_df = st.session_state.dup_after_df     # 🔒 frozen
         removed_df = st.session_state.dup_removed_df     
-        st.markdown("#### 🧾 Duplicate Removal Summary")
+        st.markdown("####  Duplicate Removal Summary")
+        st.write("")
         st.markdown("""
         <div class="summary-grid">
             <div class="summary-card">
@@ -559,24 +616,44 @@ leading to <b>over-forecasting</b>.
             removed_df.shape[0]
         ), unsafe_allow_html=True)
 
-
+        st.markdown("<br>", unsafe_allow_html=True)
         # ===== BEFORE =====
         st.markdown(
-            f"#### 📌 Before Duplicate Removal ({before_df.shape[0]} Rows)"
+            f"#### Before Duplicate Removal ({before_df.shape[0]} Rows)"
         )
-        st.dataframe(before_df, use_container_width=True)
+        st.write("")
+        render_html_table(
+            before_df,
+            title=None,
+            max_height=300
+        )
+
+        st.markdown("<br>", unsafe_allow_html=True)
 
         # ===== AFTER =====
         st.markdown(
-            f"#### ✅ After Duplicate Removal ({after_df.shape[0]} Rows)"
+            f"####  After Duplicate Removal ({after_df.shape[0]} Rows)"
         )
-        st.dataframe(after_df, use_container_width=True)
+        st.write("")
+        render_html_table(
+            after_df,
+            title=None,
+            max_height=300
+        )
+
+        st.markdown("<br>", unsafe_allow_html=True)
 
         # ===== REMOVED =====
         st.markdown(
-            f"#### ❌  Duplicates Removed ({removed_df.shape[0]} Rows)"
+            f"#### Duplicates Removed ({removed_df.shape[0]} Rows)"
         )
-        st.dataframe(removed_df, use_container_width=True)
+        st.write("")
+        render_html_table(
+            removed_df,
+            title=None,
+            max_height=300  # smaller is fine here
+        )
+
 
 
     # ============================================================
@@ -585,6 +662,7 @@ leading to <b>over-forecasting</b>.
 if step == "Remove Outliers":
 
     st.markdown("### Remove Outliers")
+    st.write("")
 
     st.markdown("""
     <div style="
@@ -722,7 +800,7 @@ if step == "Remove Outliers":
             st.session_state.df = after_df
             st.session_state.preprocessing_completed = True
 
-            st.success("✔ Outliers handled successfully (aggressive mode)")
+            st.success("Outliers handled successfully")
 
     # --------------------------------------------------
     # OUTPUT SECTION (UNCHANGED)
@@ -733,7 +811,8 @@ if step == "Remove Outliers":
         after_df = st.session_state.out_after_df
         removed_df = st.session_state.out_removed_df
 
-        st.markdown("#### 🧾 Outlier Removal Summary")
+        st.markdown("####  Outlier Removal Summary")
+        st.write("")
         st.markdown("""
         <div class="summary-grid">
             <div class="summary-card">
@@ -754,15 +833,26 @@ if step == "Remove Outliers":
             after_df.shape[0],
             removed_df.shape[0]
         ), unsafe_allow_html=True)
+        st.write("")
+            # ===== BEFORE =====
+        st.markdown(f"#### Before Outlier Handling ({before_df.shape[0]} Rows)")
+        st.write("")
+        render_html_table(before_df, max_height=300)
+        st.write("")
 
-        st.markdown(f"#### 📌 Before Outlier Handling ({before_df.shape[0]} Rows)")
-        st.dataframe(before_df, use_container_width=True)
+        # ===== AFTER =====
+        st.markdown(f"#### After Outlier Handling ({after_df.shape[0]} Rows)")
+        st.write("")
+        render_html_table(after_df, max_height=300)
+        
 
-        st.markdown(f"#### ✅ After Outlier Handling ({after_df.shape[0]} Rows)")
-        st.dataframe(after_df, use_container_width=True)
+        st.markdown("<br>", unsafe_allow_html=True)
 
-        st.markdown(f"#### ❌ Outliers Removed ({removed_df.shape[0]} Rows)")
-        st.dataframe(removed_df, use_container_width=True)
+        # ===== REMOVED =====
+        st.markdown(f"####  Outliers Removed ({removed_df.shape[0]} Rows)")
+        st.write("")
+        render_html_table(removed_df, max_height=300)
+
 
 
 
@@ -773,6 +863,7 @@ if step == "Remove Outliers":
 elif step == "Replace Missing Values":
 
     st.markdown("### Replace Missing Values")
+    st.write("")
 
     st.markdown(
     """
@@ -874,7 +965,7 @@ elif step == "Replace Missing Values":
                 affected_rows_before.index
             ].copy()
 
-            st.success("✔ NULL values replaced with 'Unknown'")
+            st.success(" NULL values replaced with 'Unknown'")
 
 
     # ------------------------------------------------------------
@@ -890,23 +981,49 @@ elif step == "Replace Missing Values":
         before_rows = st.session_state.null_before_rows
         after_rows = st.session_state.null_after_rows
         replaced_cols = st.session_state.null_replaced_cols
-
-        
         # ===================== COLUMNS =====================
-        st.markdown("#### 🧾 Columns Where NULL Values Were Replaced")
-        st.dataframe(replaced_cols, use_container_width=True)
+        st.markdown("####  Columns Where NULL Values Were Replaced")
+        st.write("")
 
+        if not replaced_cols.empty:
+            value_col = replaced_cols.columns[0]
+
+            html_cards = "".join(
+                f"""
+                <div class="summary-card">
+                    <div class="summary-title">{str(idx).replace('_', ' ').title()}</div>
+                    <div class="summary-value">{row[value_col]}</div>
+                </div>
+                """
+                for idx, row in replaced_cols.iterrows()
+            )
+
+            st.markdown(
+                f"""
+                <div class="summary-grid">
+                
+                    {html_cards}
+                </div>
+                """,
+                unsafe_allow_html=True   # 🔥 THIS IS CRITICAL
+            )
+        else:
+            st.info("No NULL values were replaced.")
+
+        st.write("")
         # ===================== BEFORE =====================
         st.markdown(
-            f"#### 📌 Rows Before Missing Values Replacement ({before_rows.shape[0]} Rows)"
+            f"#### Rows Before Missing Values Replacement ({before_rows.shape[0]} Rows)"
         )
-        st.dataframe(before_rows, use_container_width=True)
-
+        st.write("")
+        render_html_table(before_rows)
+        
         # ===================== AFTER =====================
         st.markdown(
-            f"#### ✅ Rows After Missing Values Replacement ({after_rows.shape[0]} Rows)"
+            f"####  Rows After Missing Values Replacement ({after_rows.shape[0]} Rows)"
         )
-        st.dataframe(after_rows, use_container_width=True)
+        st.write("")
+        render_html_table(after_rows)
 
 
 
@@ -980,7 +1097,7 @@ div[data-baseweb="radio"] input:checked + div {
 /* Individual card */
 .quality-card {
     flex: 1;
-    background-color: #FFFFFF;
+    background-color: white;
     border-radius: 12px;
     padding: 16px 18px;
     box-shadow: 0px 2px 8px rgba(0,0,0,0.06);
@@ -992,12 +1109,10 @@ div[data-baseweb="radio"] input:checked + div {
 .quality-title {
     font-size: 15px;
     font-weight: 600;
-    color: #1F4E79;
-
-    background-color: #EAF2FB;   /* exact light blue strip */
+    color: #ffffff;
+    background-color:#123A72;
     padding: 10px 14px;
     border-radius: 6px;
-
     margin-bottom: 18px;
 }
 
@@ -1005,6 +1120,48 @@ div[data-baseweb="radio"] input:checked + div {
 .table-scroll {
     max-height: 260px;
     overflow-y: auto;
+}
+
+/* ===============================
+   TABLE APPEARANCE (NO RENAMES)
+   =============================== */
+
+.quality-card table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #FFFFFF;
+    font-size: 14px;
+}
+
+/* Table header */
+.quality-card th {
+    background-color: #E5ECF4;   /* slightly darker */
+    color: #1F2937;
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid #D6DEE8;
+}
+
+/* Table cells */
+.quality-card td {
+    padding: 9px 12px;
+    color: #111827;
+    border-bottom: 1px solid #EEF2F7;
+}
+
+/* Zebra rows (LIKE IMAGE) */
+.quality-card tr:nth-child(even) td {
+    background-color: #FFFFFF;
+}
+
+.quality-card tr:nth-child(odd) td {
+    background-color: #F3F6FA;
+}
+
+/* Subtle hover */
+.quality-card tr:hover td {
+    background-color: #E9F1FF;
 }
 
 
@@ -1043,6 +1200,32 @@ div[data-baseweb="radio"] input:checked + div {
 """, unsafe_allow_html=True)
 
 
+# Global transparent theme
+def transparent_theme():
+    return {
+        "config": {
+            "background": "transparent",
+            "view": {
+                "fill": "transparent",
+                "stroke": "transparent"
+            },
+            "axis": {
+                "labelColor": "rgba(255,255,255,0.8)",
+                "titleColor": "rgba(255,255,255,0.9)",
+                "gridColor": "rgba(255,255,255,0.25)",
+                "domainColor": "rgba(255,255,255,0.4)"
+            },
+            "text": {"color": "white"}
+        }
+    }
+
+alt.themes.register("transparent_theme", transparent_theme)
+alt.themes.enable("transparent_theme")
+
+
+
+
+
 
 # ============================================================
 # STEP 3 – EDA (LOCKED UNTIL PREPROCESSING)
@@ -1076,9 +1259,9 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
+st.write("")
 st.info(f"Dataset Loaded: **{df.shape[0]} rows × {df.shape[1]} columns**")
-
+st.write("")
 # ---------------- EDA INTRO CARD ----------------
 st.markdown(
     """
@@ -1146,7 +1329,13 @@ num_df = df.select_dtypes(include=np.number)
 # EDA NAVIGATION (INSTANT COLOR CHANGE)
 # =========================
 
-st.markdown("### 📊 Select Analysis")
+st.markdown("###  List of Analytics")
+st.markdown(
+    "<div style='margin-top:6px'></div>",
+    unsafe_allow_html=True
+)
+
+
 
 if "eda_option" not in st.session_state:
     st.session_state.eda_option = None
@@ -1159,7 +1348,8 @@ def nav_button(label, value):
         st.markdown(
             f"""
             <div style="
-                background-color:#2F75B5;
+                background-color:#4F97EE
+;
                 color:white;
                 padding:14px;
                 border-radius:10px;
@@ -1176,34 +1366,40 @@ def nav_button(label, value):
         if st.button(label, use_container_width=True):
             st.session_state.eda_option = value
             st.rerun() 
-            
 
+with st.expander(" ", expanded=True):
+    row1 = st.columns(5)
+    row2 = st.columns(4)
 
-# ---------- BUTTON GRID ----------
-col1, col2, col3 = st.columns(3)
+    with row1[0]:
+        nav_button("Data Quality Overview", "Data Quality Overview")
+    with row1[1]:
+        nav_button("Sales Overview", "Sales Overview")
+    with row1[2]:
+        nav_button("Promotion Effectiveness", "Promotion Effectiveness")
+    with row1[3]:
+        nav_button("Product-Level Analysis", "Product-Level Analysis")
+    with row1[4]:
+        nav_button("Customer-Level Analysis", "Customer-Level Analysis")
 
-with col1:
-    nav_button("Data Quality Overview", "Data Quality Overview")
-    nav_button("Product-Level Analysis", "Product-Level Analysis")
-    nav_button("Store-Level Analysis", "Store-Level Analysis")
-
-with col2:
-    nav_button("Sales Overview", "Sales Overview")
-    nav_button("Customer-Level Analysis", "Customer-Level Analysis")
-    nav_button("Sales Channel Analysis", "Sales Channel Analysis")
-
-with col3:
-    nav_button("Promotion Effectiveness", "Promotion Effectiveness")
-    nav_button("Event Impact Analysis", "Event Impact Analysis")
-    nav_button("Summary Report", "Summary Report")
+    with row2[0]:
+        nav_button("Event Impact Analysis", "Event Impact Analysis")
+    with row2[1]:
+        nav_button("Store-Level Analysis", "Store-Level Analysis")
+    with row2[2]:
+        nav_button("Sales Channel Analysis", "Sales Channel Analysis")
+    with row2[3]:
+        nav_button("Summary Report", "Summary Report")
 
 
 eda_option = st.session_state.eda_option
-
-
+st.markdown(
+    "<div style='margin-top:6px'></div>",
+    unsafe_allow_html=True
+)
 
 if eda_option is None:
-    st.info("👆 Select an analysis to view insights.")
+    st.info("Select an analysis to view insights.")
     st.stop()
 
 
@@ -1260,7 +1456,7 @@ if eda_option == "Data Quality Overview":
     # =========================
     rows_count = df.shape[0]
     cols_count = df.shape[1]
-
+    
     dup_count = df.duplicated().sum()
     dtype_counts = df.dtypes.value_counts()
 
@@ -1381,145 +1577,339 @@ elif eda_option == "Sales Overview":
     """,
     unsafe_allow_html=True
 )
-    st.markdown("### 📊 Sales Overview")
+    st.markdown("###  Sales Overview")
 
-    # ---------- ROW 1 ----------
+        # ---------- ROW 1 ----------
     st.markdown(
-    """
-    <div class="summary-grid">
-        <div class="summary-card">
-            <div class="summary-title">Total Revenue</div>
-            <div class="summary-value">{}</div>
+        """
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-title">Total Revenue</div>
+                <div class="summary-value">{}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Average Order Value</div>
+                <div class="summary-value">{}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Maximum Order Value</div>
+                <div class="summary-value">{}</div>
+            </div>
         </div>
-        <div class="summary-card">
-            <div class="summary-title">Average Order Value</div>
-            <div class="summary-value">{}</div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-title">Maximum Order Value</div>
-            <div class="summary-value">{}</div>
-        </div>
-    </div>
-    """.format(
-        f"${df[col_rev].sum():,.2f}" if col_rev else "NA",
-        f"${df[col_rev].mean():,.2f}" if col_rev else "NA",
-        f"${df[col_rev].max():,.2f}" if col_rev else "NA",
-    ),
-    unsafe_allow_html=True
-    )
+        """.format(
+            f"${df[col_rev].sum():,.2f}" if col_rev else "NA",
+            f"${df[col_rev].mean():,.2f}" if col_rev else "NA",
+            f"${df[col_rev].max():,.2f}" if col_rev else "NA",
+        ),
+        unsafe_allow_html=True
+        )
 
-    # ---------- ROW 2 ----------
+        # ---------- ROW 2 ----------
     st.markdown(
-    """
-    <div class="summary-grid">
-        <div class="summary-card">
-            <div class="summary-title">Total Sales</div>
-            <div class="summary-value">{}</div>
+        """
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-title">Total Sales</div>
+                <div class="summary-value">{}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Total Units Sold</div>
+                <div class="summary-value">{}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Average Units / Transaction</div>
+                <div class="summary-value">{}</div>
+            </div>
         </div>
-        <div class="summary-card">
-            <div class="summary-title">Total Units Sold</div>
-            <div class="summary-value">{}</div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-title">Average Units / Transaction</div>
-            <div class="summary-value">{}</div>
-        </div>
-    </div>
-    """.format(
-        f"${(df[col_qty] * df[col_price]).sum():,.2f}" if col_qty and col_price else "NA",
-        f"{df[col_qty].sum():,}" if col_qty else "NA",
-        f"{df[col_qty].mean():.2f}" if col_qty else "NA",
-    ),
-    unsafe_allow_html=True
-    )
+        """.format(
+            f"${(df[col_qty] * df[col_price]).sum():,.2f}" if col_qty and col_price else "NA",
+            f"{df[col_qty].sum():,}" if col_qty else "NA",
+            f"{df[col_qty].mean():.2f}" if col_qty else "NA",
+        ),
+        unsafe_allow_html=True
+        )
 
+    st.write("")
+    st.write("")
 
 
     if "created_at" in df.columns and col_rev:
-        st.markdown(
-    """
-    <div style="
-        background-color:#2F75B5;
-        padding:18px 25px;
-        border-radius:10px;
-        font-size:20px;
-        color:white;
-        margin-top:20px;
-        margin-bottom:10px;
-        text-align:center;
-    ">
-        <b>Sales By Time</b>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+   
+            st.markdown(
+        """
+        <div style="
+            background-color:#2F75B5;
+            padding:18px 25px;
+            border-radius:10px;
+            font-size:20px;
+            color:white;
+            margin-top:20px;
+            margin-bottom:10px;
+            text-align:center;
+        ">
+            <b>Sales By Year</b>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
+    df = df.dropna(subset=["created_at"])
 
-        # Convert to datetime safely
-        df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
+    df["Year"] = df["created_at"].dt.year
+    df["Quarter"] = df["created_at"].dt.to_period("Q").astype(str)
+    df["Month"] = df["created_at"].dt.to_period("M").astype(str)
 
-        # Aggregate sales by date
-        sales_time = (
-            df.groupby(df["created_at"].dt.date)[col_rev]
-            .sum()
-            .sort_index()
+    sales_by_year = (
+        df.groupby("Year")[col_rev]
+        .sum()
+        .sort_index()
+    )
+    
+    chart = (
+            alt.Chart(sales_by_year.reset_index())
+            .mark_bar(color="#001F5C",cornerRadiusEnd=6)
+            .encode(
+                x=alt.X("Year:O", title="Year"),
+                y=alt.Y(f"{col_rev}:Q", title="Revenue",scale=alt.Scale(padding=10)),
+                tooltip=["Year", col_rev]
+            )
+            .properties(
+                height=380,
+                background="#00D05E",
+                padding={"top": 10, "left": 10, "right": 10, "bottom": 10}
+            )
+            .configure_view(
+                fill="#00D05E",
+                strokeOpacity=0
+            )
+            .configure_axis(
+                labelColor="#000000",
+                titleColor="#000000",
+                gridColor="rgba(0,0,0,0.2)",
+                domainColor="rgba(0,0,0,0.3)"
+            )
         )
 
-        st.bar_chart(sales_time)
+    st.altair_chart(chart, use_container_width=True)
+   
+    
+
+    st.markdown(
+        """
+        <div style="
+            background-color:#2F75B5;
+            padding:18px 25px;
+            border-radius:10px;
+            font-size:20px;
+            color:white;
+            margin-top:20px;
+            margin-bottom:10px;
+            text-align:center;
+        ">
+            <b>Sales By Quaters</b>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # Aggregate revenue by quarter
+    sales_by_quarter = (
+        df.groupby("Quarter")[col_rev]
+        .sum()
+        .sort_index()
+    )
+
+    # Altair chart with SAME layout/template as yearly chart
+    chart_quarter = (
+        alt.Chart(sales_by_quarter.reset_index())
+        .mark_bar(color="#001F5C", cornerRadiusEnd=6)
+        .encode(
+            x=alt.X("Quarter:O", title="Quarter"),
+            y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
+            tooltip=["Quarter", col_rev]
+        )
+        .properties(
+            height=380,
+            background="#00D05E",
+            padding={"top": 10, "left": 10, "right": 10, "bottom": 10}
+        )
+        .configure_view(
+            fill="#00D05E",
+            strokeOpacity=0
+        )
+        .configure_axis(
+            labelColor="#000000",
+            titleColor="#000000",
+            gridColor="rgba(0,0,0,0.2)",
+            domainColor="rgba(0,0,0,0.3)"
+        )
+    )
+
+    st.altair_chart(chart_quarter, use_container_width=True)
+
+
+    st.markdown(
+        """
+        <div style="
+            background-color:#2F75B5;
+            padding:18px 25px;
+            border-radius:10px;
+            font-size:20px;
+            color:white;
+            margin-top:20px;
+            margin-bottom:10px;
+            text-align:center;
+        ">
+            <b>Sales By Month</b>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    # Aggregate revenue by month
+    sales_by_month = (
+        df.groupby("Month")[col_rev]
+        .sum()
+        .sort_index()
+    )
+
+    # Altair chart with SAME layout/template
+    chart_month = (
+        alt.Chart(sales_by_month.reset_index())
+        .mark_bar(color="#001F5C", cornerRadiusEnd=6)
+        .encode(
+            x=alt.X("Month:O", title="Month"),
+            y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
+            tooltip=["Month", col_rev]
+        )
+        .properties(
+            height=380,
+            background="#00D05E",
+            padding={"top": 10, "left": 10, "right": 10, "bottom": 10}
+        )
+        .configure_view(
+            fill="#00D05E",
+            strokeOpacity=0
+        )
+        .configure_axis(
+            labelColor="#000000",
+            titleColor="#000000",
+            gridColor="rgba(0,0,0,0.2)",
+            domainColor="rgba(0,0,0,0.3)"
+        )
+    )
+
+    st.altair_chart(chart_month, use_container_width=True)
+
+
+
 
 
     if col_store and col_rev:
-        st.markdown(
-    """
-    <div style="
-        background-color:#2F75B5;
-        padding:18px 25px;
-        border-radius:10px;
-        font-size:20px;
-        color:white;
-        margin-top:20px;
-        margin-bottom:10px;
-        text-align:center;
-    ">
-        <b>Sales By Store</b>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+            st.markdown(
+        """
+        <div style="
+            background-color:#2F75B5;
+            padding:18px 25px;
+            border-radius:10px;
+            font-size:20px;
+            color:white;
+            margin-top:20px;
+            margin-bottom:10px;
+            text-align:center;
+        ">
+            <b>Sales By Store</b>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    # Aggregate revenue by store
+    sales_store = (
+        df.groupby(col_store)[col_rev]
+        .sum()
+        .sort_values(ascending=False)
+    )
 
-        sales_store = (
-            df.groupby(col_store)[col_rev]
-            .sum()
-            .sort_values(ascending=False)
+    # Altair chart with SAME layout/template
+    chart_store = (
+        alt.Chart(sales_store.reset_index())
+        .mark_bar(color="#001F5C", cornerRadiusEnd=6)
+        .encode(
+            x=alt.X(f"{col_store}:O", title="Store"),
+            y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
+            tooltip=[col_store, col_rev]
         )
+        .properties(
+            height=380,
+            background="#00D05E",
+            padding={"top": 10, "left": 10, "right": 10, "bottom": 10}
+        )
+        .configure_view(
+            fill="#00D05E",
+            strokeOpacity=0
+        )
+        .configure_axis(
+            labelColor="#000000",
+            titleColor="#000000",
+            gridColor="rgba(0,0,0,0.2)",
+            domainColor="rgba(0,0,0,0.3)"
+        )
+    )
 
-        st.bar_chart(sales_store)
+    st.altair_chart(chart_store, use_container_width=True)
+
     if col_channel and col_rev:
-        st.markdown(
-    """
-    <div style="
-        background-color:#2F75B5;
-        padding:18px 25px;
-        border-radius:10px;
-        font-size:20px;
-        color:white;
-        margin-top:20px;
-        margin-bottom:10px;
-        text-align:center;
-    ">
-        <b>Sales By Sales Channels</b>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+            st.markdown(
+        """
+        <div style="
+            background-color:#2F75B5;
+            padding:18px 25px;
+            border-radius:10px;
+            font-size:20px;
+            color:white;
+            margin-top:20px;
+            margin-bottom:10px;
+            text-align:center;
+        ">
+            <b>Sales By Sales Channels</b>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-        sales_channel = (
-            df.groupby(col_channel)[col_rev]
-            .sum()
-            .sort_values(ascending=False)
+    # Aggregate revenue by channel
+    sales_channel = (
+        df.groupby(col_channel)[col_rev]
+        .sum()
+        .sort_values(ascending=False)
+    )
+
+    # Altair chart with SAME layout/template
+    chart_channel = (
+        alt.Chart(sales_channel.reset_index())
+        .mark_bar(color="#001F5C", cornerRadiusEnd=6)
+        .encode(
+            x=alt.X(f"{col_channel}:O", title="Channel"),
+            y=alt.Y(f"{col_rev}:Q", title="Revenue", scale=alt.Scale(padding=10)),
+            tooltip=[col_channel, col_rev]
         )
+        .properties(
+            height=380,
+            background="#00D05E",
+            padding={"top": 10, "left": 10, "right": 10, "bottom": 10}
+        )
+        .configure_view(
+            fill="#00D05E",
+            strokeOpacity=0
+        )
+        .configure_axis(
+            labelColor="#000000",
+            titleColor="#000000",
+            gridColor="rgba(0,0,0,0.2)",
+            domainColor="rgba(0,0,0,0.3)"
+        )
+    )
 
-        st.bar_chart(sales_channel)
-
+    st.altair_chart(chart_channel, use_container_width=True)
 
 
 elif eda_option == "Product-Level Analysis":
@@ -1615,49 +2005,77 @@ elif eda_option == "Product-Level Analysis":
             """,
             unsafe_allow_html=True
         )
+    # ================= THEME COLORS (DEFINE ONCE) =================
+    GREEN_BG = "#00D05E"
+    GRID_GREEN = "#3B3B3B"
+
+    BAR_BLUE = "#001F5C"
+
 
     # =========================================================
     # ROW 1 — EXISTING TWO PLOTS (LOGIC UNTOUCHED)
     # =========================================================
     col1, col2 = st.columns(2)
 
-    # ---------- PLOT 1: Revenue Contribution (UNCHANGED LOGIC) ----------
+    # ---------- PLOT 1: Revenue Contribution ----------
     with col1:
         blue_title("Revenue Contribution by Product ")
 
         fig1, ax1 = plt.subplots(figsize=(7, 4))
 
+        # 🔑 GREEN THEME
+        fig1.patch.set_facecolor(GREEN_BG)
+        ax1.set_facecolor(GREEN_BG)
+        fig1.subplots_adjust(
+    left=0.08,
+    right=0.98,
+    top=0.92,
+    bottom=0.28   # enough for rotated labels
+)
+
         ax1.bar(
             top_products.index.astype(str),
-            top_products["total_revenue"]
+            top_products["total_revenue"],
+            color=BAR_BLUE
         )
 
         ax1.set_xlabel("Product ID")
         ax1.set_ylabel("Total Revenue")
         ax1.tick_params(axis="x", rotation=45)
-        ax1.grid(axis="y", linestyle="--", alpha=0.4)
+        ax1.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
 
+        ax1.spines["top"].set_visible(False)
+        ax1.spines["right"].set_visible(False)
+        
         st.pyplot(fig1)
         plt.close(fig1)
 
 
-    # ---------- PLOT 2: Demand vs Profitability (UNCHANGED LOGIC) ----------
+    # ---------- PLOT 2: Demand vs Profitability ----------
     with col2:
         blue_title("Product Demand vs Profitability")
 
         fig2, ax2 = plt.subplots(figsize=(7, 4))
-
+        # 🔑 GREEN THEME
+        fig2.patch.set_facecolor(GREEN_BG)
+        ax2.set_facecolor(GREEN_BG)
+        fig2.subplots_adjust(
+    left=0.08,
+    right=0.98,
+    top=0.92,
+    bottom=0.13   # enough for rotated labels
+)
         ax2.scatter(
             product_metrics["total_quantity_sold"],
             product_metrics["total_profit"],
-            alpha=0.6
+            alpha=0.6,
+            color=BAR_BLUE
         )
 
         ax2.set_xlabel("Total Quantity Sold (Demand)")
         ax2.set_ylabel("Total Profit")
-        ax2.grid(True, linestyle="--", alpha=0.4)
+        ax2.grid(True, linestyle="-", color=GRID_GREEN, alpha=0.5)
 
-        # SAME annotation logic you already had
         for pid, row in label_products.iterrows():
             ax2.annotate(
                 pid,
@@ -1668,15 +2086,19 @@ elif eda_option == "Product-Level Analysis":
                 alpha=0.9
             )
 
+        ax2.spines["top"].set_visible(False)
+        ax2.spines["right"].set_visible(False)
+
         st.pyplot(fig2)
         plt.close(fig2)
+
 
     # =========================================================
     # ROW 2 — TWO NEW 2D ANALYSES (SAME DESIGN)
     # =========================================================
     col3, col4 = st.columns(2)
 
-    # ---------- PLOT 3: Revenue vs Discount by Product ----------
+    # ---------- PLOT 3: Revenue vs Discount ----------
     with col3:
         blue_title("Revenue vs Discount by Product ")
 
@@ -1692,6 +2114,16 @@ elif eda_option == "Product-Level Analysis":
 
         fig3, ax3 = plt.subplots(figsize=(7, 4))
 
+        # 🔑 GREEN THEME
+        fig3.patch.set_facecolor(GREEN_BG)
+        ax3.set_facecolor(GREEN_BG)
+        fig3.subplots_adjust(
+    left=0.08,
+    right=0.98,
+    top=0.92,
+    bottom=0.28   # enough for rotated labels
+)
+
         x = np.arange(len(product_metrics_viz))
         width = 0.35
 
@@ -1699,15 +2131,18 @@ elif eda_option == "Product-Level Analysis":
             x - width/2,
             product_metrics_viz["total_revenue"],
             width,
-            label="Revenue"
+            label="Revenue",
+            color=BAR_BLUE
         )
 
         ax3.bar(
             x + width/2,
             product_metrics_viz["total_discount"],
             width,
-            label="Discount Given"
+            label="Discount Given",
+            color="#F59E0B"
         )
+
         ax3.set_xlabel("Product ID")
         ax3.set_xticks(x)
         ax3.set_xticklabels(
@@ -1718,15 +2153,17 @@ elif eda_option == "Product-Level Analysis":
 
         ax3.set_ylabel("Amount")
         ax3.legend()
-        ax3.grid(axis="y", linestyle="--", alpha=0.4)
+        ax3.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
+
+        ax3.spines["top"].set_visible(False)
+        ax3.spines["right"].set_visible(False)
 
         plt.tight_layout()
         st.pyplot(fig3)
         plt.close(fig3)
 
 
-
-    # ---------- PLOT 4: Stock Sold vs Stock Damaged (Top 10 Products) ----------
+    # ---------- PLOT 4: Stock Sold vs Stock Damaged ----------
     with col4:
         blue_title("Stock Sold vs Stock Damaged ")
 
@@ -1742,17 +2179,49 @@ elif eda_option == "Product-Level Analysis":
 
         fig4, ax4 = plt.subplots(figsize=(7, 4))
 
+        # 🔑 GREEN THEME
+        fig4.patch.set_facecolor(GREEN_BG)
+        ax4.set_facecolor(GREEN_BG)
+        fig4.subplots_adjust(
+    left=0.08,
+    right=0.98,
+    top=0.92,
+    bottom=0.17  # enough for rotated labels
+)
+
         x = np.arange(len(stock_metrics))
         width = 0.35
 
-        ax4.bar(x - width/2, stock_metrics["stock_sold"], width, label="Stock Sold")
-        ax4.bar(x + width/2, stock_metrics["stock_damaged"], width, label="Stock Damaged")
+        ax4.bar(
+            x - width/2,
+            stock_metrics["stock_sold"],
+            width,
+            label="Stock Sold",
+            color=BAR_BLUE
+        )
+
+        ax4.bar(
+            x + width/2,
+            stock_metrics["stock_damaged"],
+            width,
+            label="Stock Damaged",
+            color="#EF4444"
+        )
+
         ax4.set_xlabel("Product ID")
         ax4.set_xticks(x)
-        ax4.set_xticklabels(stock_metrics.index.astype(str), rotation=45,ha="right")
+        ax4.set_xticklabels(
+            stock_metrics.index.astype(str),
+            rotation=45,
+            ha="right"
+        )
+
         ax4.set_ylabel("Quantity")
         ax4.legend()
-        ax4.grid(axis="y", linestyle="--", alpha=0.4)
+        ax4.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
+
+        ax4.spines["top"].set_visible(False)
+        ax4.spines["right"].set_visible(False)
 
         st.pyplot(fig4)
         plt.close(fig4)
@@ -1845,22 +2314,38 @@ elif eda_option == "Customer-Level Analysis":
             """,
             unsafe_allow_html=True
         )
+    # ================= THEME COLORS (DEFINE ONCE) =================
+    GREEN_BG = "#00D05E"
+    GRID_GREEN = "#3B3B3B"
+    BAR_BLUE = "#001F5C"
 
     # =========================================================
     # ROW 1 — CUSTOMER VALUE & FREQUENCY
     # =========================================================
     col1, col2 = st.columns(2)
+
     # ---------- PLOT 1: Revenue Contribution by Customer ----------
     with col1:
         blue_title("Revenue Contribution by Customer ")
 
         fig1, ax1 = plt.subplots(figsize=(7, 4))
 
+        # 🔑 GREEN THEME
+        fig1.patch.set_facecolor(GREEN_BG)
+        ax1.set_facecolor(GREEN_BG)
+        fig1.subplots_adjust(
+            left=0.08,
+            right=0.98,
+            top=0.92,
+            bottom=0.28
+        )
+
         x = np.arange(len(top_customers))
 
         ax1.bar(
             x,
-            top_customers["total_revenue"]
+            top_customers["total_revenue"],
+            color=BAR_BLUE
         )
 
         ax1.set_xlabel("Customer ID")
@@ -1873,10 +2358,15 @@ elif eda_option == "Customer-Level Analysis":
             ha="right"
         )
 
+        ax1.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
+        ax1.spines["top"].set_visible(False)
+        ax1.spines["right"].set_visible(False)
+
         st.pyplot(fig1)
         plt.close(fig1)
-   
-    # ---------- 2D BAR: Avg Order Value vs Discount Dependency ----------
+
+
+    # ---------- PLOT 2: Avg Order Value vs Discount Dependency ----------
     with col2:
         blue_title("Customer Order Value vs Discount Dependency")
 
@@ -1889,7 +2379,6 @@ elif eda_option == "Customer-Level Analysis":
             .dropna()
         )
 
-        # Select top customers by order value
         top_customers = (
             customer_discount_metrics
             .sort_values("avg_order_value", ascending=False)
@@ -1899,42 +2388,51 @@ elif eda_option == "Customer-Level Analysis":
         x = np.arange(len(top_customers))
         width = 0.35
 
-        fig, ax = plt.subplots(figsize=(7, 4))
+        fig2, ax2 = plt.subplots(figsize=(7, 4))
 
-        # Bar 1 — Average Order Value
-        ax.bar(
-            x - width/2,
+        # 🔑 GREEN THEME
+        fig2.patch.set_facecolor(GREEN_BG)
+        ax2.set_facecolor(GREEN_BG)
+        fig2.subplots_adjust(
+            left=0.08,
+            right=0.98,
+            top=0.92,
+            bottom=0.30
+        )
+
+        ax2.bar(
+            x - width / 2,
             top_customers["avg_order_value"],
             width,
             label="Avg Order Value",
-            color="#1f77b4"
+            color=BAR_BLUE
         )
 
-        # Bar 2 — Average Discount Applied
-        ax.bar(
-            x + width/2,
+        ax2.bar(
+            x + width / 2,
             top_customers["avg_discount"],
             width,
             label="Avg Discount Applied",
-            color="#ff7f0e"
+            color="#F59E0B"
         )
 
-        ax.set_xticks(x)
-        ax.set_xticklabels(
+        ax2.set_xticks(x)
+        ax2.set_xticklabels(
             top_customers.index.astype(str),
             rotation=45,
             ha="right"
         )
 
-        ax.set_ylabel("Amount")
-        ax.set_xlabel("Customer ID")
-        ax.legend()
-        ax.grid(axis="y", linestyle="--", alpha=0.4)
+        ax2.set_ylabel("Amount")
+        ax2.set_xlabel("Customer ID")
+        ax2.legend()
+        ax2.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
 
-        plt.tight_layout()
-        st.pyplot(fig)
-        plt.close(fig)
+        ax2.spines["top"].set_visible(False)
+        ax2.spines["right"].set_visible(False)
 
+        st.pyplot(fig2)
+        plt.close(fig2)
 
 
     # =========================================================
@@ -1942,11 +2440,10 @@ elif eda_option == "Customer-Level Analysis":
     # =========================================================
     col3, col4 = st.columns(2)
 
-   # ---------- PLOT 3: Revenue vs Loyalty Contribution (%) ----------
+    # ---------- PLOT 3: Revenue vs Loyalty Contribution (%) ----------
     with col3:
         blue_title("Revenue vs Loyalty Contribution (%)")
 
-        # Top customers by revenue
         top_loyal_customers = (
             customer_metrics
             .sort_values("total_revenue", ascending=False)
@@ -1954,7 +2451,6 @@ elif eda_option == "Customer-Level Analysis":
             .copy()
         )
 
-        # Convert to percentage contribution
         top_loyal_customers["revenue_pct"] = (
             top_loyal_customers["total_revenue"]
             / top_loyal_customers["total_revenue"].sum()
@@ -1965,57 +2461,66 @@ elif eda_option == "Customer-Level Analysis":
             / top_loyal_customers["loyalty_points_earned"].sum()
         ) * 100
 
-        fig, ax = plt.subplots(figsize=(7, 4))
+        fig3, ax3 = plt.subplots(figsize=(7, 4))
+
+        # 🔑 GREEN THEME
+        fig3.patch.set_facecolor(GREEN_BG)
+        ax3.set_facecolor(GREEN_BG)
+        fig3.subplots_adjust(
+            left=0.08,
+            right=0.98,
+            top=0.92,
+            bottom=0.28
+        )
 
         x = np.arange(len(top_loyal_customers))
         width = 0.35
 
-        # Revenue %
-        ax.bar(
-            x - width/2,
+        ax3.bar(
+            x - width / 2,
             top_loyal_customers["revenue_pct"],
             width,
             label="Revenue Contribution (%)",
-            color="#1f77b4"
+            color=BAR_BLUE
         )
 
-        # Loyalty %
-        ax.bar(
-            x + width/2,
+        ax3.bar(
+            x + width / 2,
             top_loyal_customers["loyalty_pct"],
             width,
             label="Loyalty Contribution (%)",
-            color="#ff7f0e"
+            color="#F59E0B"
         )
 
-        ax.set_xticks(x)
-        ax.set_xticklabels(
+        ax3.set_xticks(x)
+        ax3.set_xticklabels(
             top_loyal_customers.index.astype(str),
             rotation=45,
             ha="right"
         )
-        ax.set_xlabel("Customer ID")
-        ax.set_ylabel("Percentage Contribution (%)")
-        ax.legend()
-        ax.grid(axis="y", linestyle="--", alpha=0.4)
 
-        plt.tight_layout()
-        st.pyplot(fig)
-        plt.close(fig)
+        ax3.set_xlabel("Customer ID")
+        ax3.set_ylabel("Percentage Contribution (%)")
+        ax3.legend()
+        ax3.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
+
+        ax3.spines["top"].set_visible(False)
+        ax3.spines["right"].set_visible(False)
+
+        st.pyplot(fig3)
+        plt.close(fig3)
 
 
-    # ---------- PLOT 4: Customer Satisfaction vs Recency (Insightful) ----------
+    # ---------- PLOT 4: Customer Satisfaction vs Recency ----------
     with col4:
         blue_title("Customer Satisfaction vs Recency")
 
-        # Bucket recency
         customer_metrics["recency_bucket"] = pd.cut(
             customer_metrics["days_since_last_purchase"],
             bins=[0, 30, 90, 180, 365],
             labels=["0–30 Days", "31–90 Days", "91–180 Days", "181–365 Days"]
         )
 
-        # Aggregate satisfaction + customer count
         recency_summary = (
             customer_metrics
             .groupby("recency_bucket", observed=True)
@@ -2025,21 +2530,35 @@ elif eda_option == "Customer-Level Analysis":
             )
         )
 
-        fig, ax = plt.subplots(figsize=(7, 4))
+        fig4, ax4 = plt.subplots(figsize=(7, 4))
 
-        bars = ax.bar(
-            recency_summary.index.astype(str),
-            recency_summary["avg_satisfaction"]
+        # 🔑 GREEN THEME
+        fig4.patch.set_facecolor(GREEN_BG)
+        ax4.set_facecolor(GREEN_BG)
+        fig4.subplots_adjust(
+            left=0.10,
+            right=0.98,
+            top=0.92,
+            bottom=0.22
         )
 
-        ax.set_xlabel("Days Since Last Purchase")
-        ax.set_ylabel("Average Customer Satisfaction")
-        ax.set_ylim(0, 5)
-        ax.grid(axis="y", linestyle="--", alpha=0.4)
+        bars = ax4.bar(
+            recency_summary.index.astype(str),
+            recency_summary["avg_satisfaction"],
+            color=BAR_BLUE
+        )
+
+        ax4.set_xlabel("Days Since Last Purchase")
+        ax4.set_ylabel("Average Customer Satisfaction")
+        ax4.set_ylim(0, 5)
+        ax4.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
+
+        ax4.spines["top"].set_visible(False)
+        ax4.spines["right"].set_visible(False)
 
         # ---- Add customer count labels ----
         for bar, count in zip(bars, recency_summary["customer_count"]):
-            ax.text(
+            ax4.text(
                 bar.get_x() + bar.get_width() / 2,
                 bar.get_height() + 0.05,
                 f"{count} customers",
@@ -2047,11 +2566,8 @@ elif eda_option == "Customer-Level Analysis":
                 fontsize=9
             )
 
-
-        plt.tight_layout()
-        st.pyplot(fig)
-        plt.close(fig)
-
+        st.pyplot(fig4)
+        plt.close(fig4)
 
 elif eda_option == "Store-Level Analysis":
 
@@ -2166,13 +2682,18 @@ elif eda_option == "Store-Level Analysis":
         values=col_qty,
         fill_value=0
     )
+    # ================= THEME COLORS (DEFINE ONCE) =================
+    GREEN_BG = "#00D05E"
+    GRID_GREEN = "#3B3B3B"
+
+    BAR_BLUE = "#001F5C"
 
     # =========================================================
-    # ROW 1 — EXISTING PLOTS (UNCHANGED)
+    # ROW 1 — EXISTING PLOTS (THEMED ONLY)
     # =========================================================
     col1, col2 = st.columns(2)
 
-    # ---------- PLOT 1: Revenue Concentration (UNCHANGED) ----------
+    # ---------- PLOT 1: Revenue Concentration Across Stores ----------
     with col1:
         blue_title("Revenue Concentration Across Stores")
 
@@ -2183,19 +2704,41 @@ elif eda_option == "Store-Level Analysis":
         )
 
         fig1, ax1 = plt.subplots(figsize=(7, 4))
-        ax1.bar(store_revenue.index.astype(str), store_revenue.values)
+
+        # 🔑 GREEN THEME
+        fig1.patch.set_facecolor(GREEN_BG)
+        ax1.set_facecolor(GREEN_BG)
+        fig1.subplots_adjust(left=0.08, right=0.98, top=0.92, bottom=0.16)
+
+        ax1.bar(
+            store_revenue.index.astype(str),
+            store_revenue.values,
+            color=BAR_BLUE
+        )
+
         ax1.set_xlabel("Store ID")
         ax1.set_ylabel("Total Revenue")
         ax1.tick_params(axis="x", rotation=45)
-        ax1.grid(axis="y", linestyle="--", alpha=0.4)
+        ax1.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
+
+        ax1.spines["top"].set_visible(False)
+        ax1.spines["right"].set_visible(False)
+
         st.pyplot(fig1)
         plt.close(fig1)
 
-    # ---------- PLOT 2: Store-wise Product Mix (UNCHANGED) ----------
+
+    # ---------- PLOT 2: Store-wise Product Mix ----------
     with col2:
         blue_title("Store-wise Product Mix (Quantity Sold)")
 
         fig2, ax2 = plt.subplots(figsize=(7, 4))
+
+        # 🔑 GREEN THEME
+        fig2.patch.set_facecolor(GREEN_BG)
+        ax2.set_facecolor(GREEN_BG)
+        fig2.subplots_adjust(left=0.08, right=0.78, top=0.92, bottom=0.25)
+
         bottom = np.zeros(len(pivot_qty))
 
         for product in pivot_qty.columns:
@@ -2210,12 +2753,12 @@ elif eda_option == "Store-Level Analysis":
 
         ax2.set_xlabel("Store ID")
         ax2.set_ylabel("Quantity Sold")
-
         ax2.tick_params(axis="x", rotation=45)
-        for label in ax2.get_xticklabels():
-            label.set_ha("right")   # ✅ right align
 
-        ax2.grid(axis="y", linestyle="--", alpha=0.4)
+        for label in ax2.get_xticklabels():
+            label.set_ha("right")
+
+        ax2.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
 
         ax2.legend(
             title="Product ID",
@@ -2224,16 +2767,19 @@ elif eda_option == "Store-Level Analysis":
             fontsize=8
         )
 
+        ax2.spines["top"].set_visible(False)
+        ax2.spines["right"].set_visible(False)
+
         st.pyplot(fig2)
         plt.close(fig2)
 
 
     # =========================================================
-    # ROW 2 — NEW 2D BAR PLOTS (INSIGHTFUL)
+    # ROW 2 — NEW 2D BAR PLOTS (THEMED)
     # =========================================================
     col3, col4 = st.columns(2)
 
-    # ---------- PLOT 3: Store Sales vs Returns ----------
+    # ---------- PLOT 3: Store Sales vs Returned Quantity ----------
     with col3:
         blue_title("Store Sales vs Returned Quantity")
 
@@ -2250,20 +2796,43 @@ elif eda_option == "Store-Level Analysis":
         width = 0.35
 
         fig3, ax3 = plt.subplots(figsize=(7, 4))
-        ax3.bar(x - width/2, store_returns["total_sales"], width, label="Units Sold")
-        ax3.bar(x + width/2, store_returns["total_returns"], width, label="Returned Units")
+
+        # 🔑 GREEN THEME
+        fig3.patch.set_facecolor(GREEN_BG)
+        ax3.set_facecolor(GREEN_BG)
+        fig3.subplots_adjust(left=0.08, right=0.98, top=0.92, bottom=0.28)
+
+        ax3.bar(
+            x - width / 2,
+            store_returns["total_sales"],
+            width,
+            label="Units Sold",
+            color=BAR_BLUE
+        )
+
+        ax3.bar(
+            x + width / 2,
+            store_returns["total_returns"],
+            width,
+            label="Returned Units",
+            color="#EF4444"
+        )
 
         ax3.set_xticks(x)
         ax3.set_xticklabels(store_returns.index.astype(str), rotation=45, ha="right")
         ax3.set_ylabel("Quantity")
         ax3.set_xlabel("Store ID")
         ax3.legend()
-        ax3.grid(axis="y", linestyle="--", alpha=0.4)
+        ax3.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
+
+        ax3.spines["top"].set_visible(False)
+        ax3.spines["right"].set_visible(False)
 
         st.pyplot(fig3)
         plt.close(fig3)
 
-    # ---------- PLOT 4: Store Demand vs Revenue ----------
+
+    # ---------- PLOT 4: Units Sold vs Revenue ----------
     with col4:
         blue_title("Units Sold vs Revenue")
 
@@ -2273,7 +2842,7 @@ elif eda_option == "Store-Level Analysis":
                 total_units_sold=(col_qty, "sum"),
                 total_revenue=(col_revenue, "sum")
             )
-            .loc[top_stores]   # ✅ FIXED
+            .loc[top_stores]
         )
 
         x = np.arange(len(store_efficiency))
@@ -2281,12 +2850,18 @@ elif eda_option == "Store-Level Analysis":
 
         fig4, ax1 = plt.subplots(figsize=(7, 4))
 
+        # 🔑 GREEN THEME
+        fig4.patch.set_facecolor(GREEN_BG)
+        ax1.set_facecolor(GREEN_BG)
+        fig4.subplots_adjust(left=0.10, right=0.90, top=0.92, bottom=0.26)
+
         # Units Sold — LEFT AXIS
         ax1.bar(
             x - width / 2,
             store_efficiency["total_units_sold"],
             width,
-            label="Units Sold"
+            label="Units Sold",
+            color=BAR_BLUE
         )
         ax1.set_ylabel("Units Sold")
 
@@ -2297,10 +2872,10 @@ elif eda_option == "Store-Level Analysis":
             store_efficiency["total_revenue"],
             width,
             label="Revenue",
-            color="#ff7f0e"
+            color="#F59E0B"
         )
         ax2.set_ylabel("Revenue")
-        
+
         ax1.set_xticks(x)
         ax1.set_xticklabels(
             store_efficiency.index.astype(str),
@@ -2312,11 +2887,17 @@ elif eda_option == "Store-Level Analysis":
         h1, l1 = ax1.get_legend_handles_labels()
         h2, l2 = ax2.get_legend_handles_labels()
         ax1.legend(h1 + h2, l1 + l2, loc="upper right")
+
         ax1.set_xlabel("Store ID")
-        ax1.grid(axis="y", linestyle="--", alpha=0.4)
+        ax1.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
+
+        ax1.spines["top"].set_visible(False)
+        ax1.spines["right"].set_visible(False)
+        ax2.spines["top"].set_visible(False)
 
         st.pyplot(fig4)
         plt.close(fig4)
+
 
 
 elif eda_option == "Sales Channel Analysis":
@@ -2411,13 +2992,18 @@ elif eda_option == "Sales Channel Analysis":
         .head(TOP_CHANNELS)
         .index
     )
+    # ================= THEME COLORS (DEFINE ONCE) =================
+    GREEN_BG = "#00D05E"
+    GRID_GREEN = "#3B3B3B"
+
+    BAR_BLUE = "#001F5C"
 
     # =========================================================
-    # ROW 1 — EXISTING PLOTS (UNCHANGED LOGIC)
+    # ROW 1 — EXISTING PLOTS (THEMED ONLY)
     # =========================================================
     col1, col2 = st.columns(2)
 
-    # ---------- PLOT 1: Revenue Contribution (DONUT – ORIGINAL CLEAN STYLE) ----------
+    # ---------- PLOT 1: Revenue Contribution (DONUT) ----------
     with col1:
         blue_title("Revenue Contribution by Sales Channel")
 
@@ -2427,7 +3013,11 @@ elif eda_option == "Sales Channel Analysis":
             .loc[top_channels]
         )
 
-        fig1, ax1 = plt.subplots(figsize=(3, 3))  # ⬅ balanced size like old image
+        fig1, ax1 = plt.subplots(figsize=(2, 2))
+
+        # 🔑 THEME (IMPORTANT FOR PIE)
+        fig1.patch.set_facecolor(GREEN_BG)
+        ax1.set_facecolor(GREEN_BG)
 
         wedges, texts, autotexts = ax1.pie(
             channel_revenue.values,
@@ -2436,30 +3026,26 @@ elif eda_option == "Sales Channel Analysis":
             startangle=90,
             colors=plt.cm.tab10.colors,
             wedgeprops={
-                "width": 0.45,          # ⬅ ORIGINAL thickness
+                "width": 0.55,
                 "edgecolor": "white"
             },
-            pctdistance=0.75           # ⬅ ORIGINAL % placement
+            pctdistance=0.75
         )
 
-        # Percentage labels (inside)
         for t in autotexts:
-            t.set_fontsize(5)
+            t.set_fontsize(4)
             t.set_color("black")
 
-        # Channel labels (outside)
         for t in texts:
-            t.set_fontsize(5)
+            t.set_fontsize(4)
 
-        ax1.set_aspect("equal")       # perfect donut
+        ax1.set_aspect("equal")
 
         st.pyplot(fig1)
         plt.close(fig1)
 
 
-
-
-    # ---------- PLOT 2: Average Order Value (DOT – LABELED) ----------
+    # ---------- PLOT 2: Average Order Value ----------
     with col2:
         blue_title("Average Order Value by Sales Channel")
 
@@ -2468,20 +3054,25 @@ elif eda_option == "Sales Channel Analysis":
             for ch in top_channels
         ]
 
-        fig2, ax2 = plt.subplots(figsize=(7, 4))
+        fig2, ax2 = plt.subplots(figsize=(7, 5))
+
+        # 🔑 GREEN THEME
+        fig2.patch.set_facecolor(GREEN_BG)
+        ax2.set_facecolor(GREEN_BG)
+        fig2.subplots_adjust(left=0.08, right=0.98, top=0.92, bottom=0.03)
 
         ax2.scatter(
             top_channels.astype(str),
             aov_values,
             s=90,
-            alpha=0.85
+            alpha=0.85,
+            color=BAR_BLUE
         )
 
-        # ---- Label each bubble ----
         for x, y in zip(top_channels.astype(str), aov_values):
             ax2.text(
                 x,
-                y + (max(aov_values) * 0.02),  # slight vertical offset
+                y + (max(aov_values) * 0.02),
                 f"{int(y)}",
                 ha="center",
                 va="bottom",
@@ -2496,18 +3087,20 @@ elif eda_option == "Sales Channel Analysis":
         for label in ax2.get_xticklabels():
             label.set_ha("right")
 
-        ax2.grid(axis="y", linestyle="--", alpha=0.4)
+        ax2.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
+        ax2.spines["top"].set_visible(False)
+        ax2.spines["right"].set_visible(False)
 
         st.pyplot(fig2)
         plt.close(fig2)
 
 
     # =========================================================
-    # ROW 2 — NEW 2D BAR PLOTS (INSIGHTFUL)
+    # ROW 2 — NEW 2D BAR PLOTS (THEMED)
     # =========================================================
     col3, col4 = st.columns(2)
 
-    # ---------- PLOT: Units Sold vs Revenue by Sales Channel ----------
+    # ---------- PLOT 3: Units Sold vs Revenue ----------
     with col3:
         blue_title("Units Sold vs Revenue by Sales Channel")
 
@@ -2523,30 +3116,32 @@ elif eda_option == "Sales Channel Analysis":
         x = np.arange(len(channel_volume))
         width = 0.35
 
-        fig, ax1 = plt.subplots(figsize=(7, 4))
+        fig3, ax1 = plt.subplots(figsize=(7, 4))
 
-        # ---- Units Sold (LEFT AXIS) ----
-        bars1 = ax1.bar(
-            x - width/2,
+        # 🔑 GREEN THEME
+        fig3.patch.set_facecolor(GREEN_BG)
+        ax1.set_facecolor(GREEN_BG)
+        fig3.subplots_adjust(left=0.10, right=0.90, top=0.92, bottom=0.28)
+
+        ax1.bar(
+            x - width / 2,
             channel_volume["total_units_sold"],
             width,
             label="Units Sold",
-            color="#1f77b4"
+            color=BAR_BLUE
         )
         ax1.set_ylabel("Units Sold")
 
-        # ---- Revenue (RIGHT AXIS) ----
         ax2 = ax1.twinx()
-        bars2 = ax2.bar(
-            x + width/2,
+        ax2.bar(
+            x + width / 2,
             channel_volume["total_revenue"],
             width,
             label="Revenue",
-            color="#ff7f0e"
+            color="#F59E0B"
         )
         ax2.set_ylabel("Revenue")
 
-        # ---- X Axis ----
         ax1.set_xticks(x)
         ax1.set_xticklabels(
             channel_volume.index.astype(str),
@@ -2555,17 +3150,20 @@ elif eda_option == "Sales Channel Analysis":
         )
         ax1.set_xlabel("Sales Channel")
 
-  
-        # ---- Combined legend ----
         h1, l1 = ax1.get_legend_handles_labels()
         h2, l2 = ax2.get_legend_handles_labels()
         ax1.legend(h1 + h2, l1 + l2, loc="upper right")
 
-        ax1.grid(axis="y", linestyle="--", alpha=0.4)
+        ax1.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
+        ax1.spines["top"].set_visible(False)
+        ax1.spines["right"].set_visible(False)
+        ax2.spines["top"].set_visible(False)
 
-        st.pyplot(fig)
-        plt.close(fig)
-    # ---------- 2D BAR: Revenue vs Profit by Sales Channel ----------
+        st.pyplot(fig3)
+        plt.close(fig3)
+
+
+    # ---------- PLOT 4: Revenue vs Profit ----------
     with col4:
         blue_title("Sales Channel Revenue vs Profit")
 
@@ -2573,7 +3171,7 @@ elif eda_option == "Sales Channel Analysis":
             df.groupby(col_channel)
             .agg(
                 total_revenue=(col_revenue, "sum"),
-                total_profit=("profit_value", "sum")   # <-- ensure this column exists
+                total_profit=("profit_value", "sum")
             )
             .sort_values("total_revenue", ascending=False)
             .head(15)
@@ -2582,33 +3180,46 @@ elif eda_option == "Sales Channel Analysis":
         x = np.arange(len(channel_finance))
         width = 0.35
 
-        fig, ax = plt.subplots(figsize=(8, 4))
+        fig4, ax4 = plt.subplots(figsize=(8, 4))
 
-        ax.bar(
-            x - width/2,
+        # 🔑 GREEN THEME
+        fig4.patch.set_facecolor(GREEN_BG)
+        ax4.set_facecolor(GREEN_BG)
+        fig4.subplots_adjust(left=0.08, right=0.98, top=0.92, bottom=0.14)
+
+        ax4.bar(
+            x - width / 2,
             channel_finance["total_revenue"],
             width,
-            label="Total Revenue"
+            label="Total Revenue",
+            color=BAR_BLUE
         )
 
-        ax.bar(
-            x + width/2,
+        ax4.bar(
+            x + width / 2,
             channel_finance["total_profit"],
             width,
-            label="Total Profit"
+            label="Total Profit",
+            color="#0A6849"
         )
 
-        ax.set_xticks(x)
-        ax.set_xticklabels(channel_finance.index.astype(str),rotation=45,
-        ha="right"
-)
-        ax.set_xlabel("Sales Channel")
-        ax.set_ylabel("Amount")
-        ax.legend()
-        ax.grid(axis="y", linestyle="--", alpha=0.4)
+        ax4.set_xticks(x)
+        ax4.set_xticklabels(
+            channel_finance.index.astype(str),
+            rotation=45,
+            ha="right"
+        )
 
-        st.pyplot(fig)
-        plt.close(fig)
+        ax4.set_xlabel("Sales Channel")
+        ax4.set_ylabel("Amount")
+        ax4.legend()
+        ax4.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
+
+        ax4.spines["top"].set_visible(False)
+        ax4.spines["right"].set_visible(False)
+
+        st.pyplot(fig4)
+        plt.close(fig4)
 
 elif eda_option == "Promotion Effectiveness":
 
@@ -2715,9 +3326,14 @@ elif eda_option == "Promotion Effectiveness":
         .sort_values("net_uplift", ascending=False)
         .head(TOP_N)
     )
+    # ================= THEME COLORS (DEFINE ONCE) =================
+    GREEN_BG = "#00D05E"
+    GRID_GREEN = "#3B3B3B"
+
+    BAR_BLUE = "#001F5C"
 
     # =========================================================
-    # ROW 1 — EXISTING PLOTS (SAME LOGIC, NEW LAYOUT)
+    # ROW 1 — EXISTING PLOTS (SAME LOGIC, THEMED)
     # =========================================================
     col1, col2 = st.columns(2)
 
@@ -2727,20 +3343,30 @@ elif eda_option == "Promotion Effectiveness":
 
         fig, ax = plt.subplots(figsize=(7, 4))
 
+        # 🔑 THEME
+        fig.patch.set_facecolor(GREEN_BG)
+        ax.set_facecolor(GREEN_BG)
+        fig.subplots_adjust(left=0.08, right=0.98, top=0.92, bottom=0.28)
+
         ax.bar(
             top_promos.index.astype(str),
             top_promos["net_uplift"],
-            alpha=0.85
+            alpha=0.85,
+            color=BAR_BLUE
         )
 
         ax.axhline(0, color="black", linewidth=1)
         ax.set_xlabel("Promotion ID")
         ax.set_ylabel("Net Uplift Revenue")
         ax.tick_params(axis="x", rotation=45)
-        ax.grid(axis="y", linestyle="--", alpha=0.4)
+        ax.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
+
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
 
         st.pyplot(fig)
         plt.close(fig)
+
 
     # ---------- PLOT 2: SALES vs COST ----------
     with col2:
@@ -2748,11 +3374,17 @@ elif eda_option == "Promotion Effectiveness":
 
         fig, ax = plt.subplots(figsize=(7, 4))
 
+        # 🔑 THEME
+        fig.patch.set_facecolor(GREEN_BG)
+        ax.set_facecolor(GREEN_BG)
+        fig.subplots_adjust(left=0.10, right=0.98, top=0.92, bottom=0.13)
+
         ax.scatter(
             top_promos["promo_cost"],
             top_promos["promo_total_sales_amount"],
             s=top_promos["promo_total_sales_amount"] / 1500,
             alpha=0.75,
+            color=BAR_BLUE,
             edgecolors="black",
             linewidth=0.5
         )
@@ -2762,8 +3394,8 @@ elif eda_option == "Promotion Effectiveness":
             [0, max_cost],
             [0, max_cost],
             linestyle="--",
-            color="gray",
-            alpha=0.4
+            color=GRID_GREEN,
+            alpha=0.6
         )
 
         top_labels = top_promos.sort_values(
@@ -2776,31 +3408,33 @@ elif eda_option == "Promotion Effectiveness":
                 (row["promo_cost"], row["promo_total_sales_amount"]),
                 xytext=(6, 6),
                 textcoords="offset points",
-                fontsize=9,
+                fontsize=9
             )
 
         ax.set_xlabel("Promotion Cost")
         ax.set_ylabel("Promotion Total Sales Amount")
-        ax.grid(True, linestyle="--", alpha=0.3)
+        ax.grid(True, linestyle="-", color=GRID_GREEN, alpha=0.5)
+
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
 
         st.pyplot(fig)
         plt.close(fig)
 
+
     # =========================================================
-    # ROW 2 — NEW 2D BAR PLOTS (INSIGHT-DRIVEN)
+    # ROW 2 — NEW 2D BAR PLOTS (THEMED)
     # =========================================================
     col3, col4 = st.columns(2)
 
-    # ---------- PLOT: PROMOTION EFFECT ON QUANTITY SOLD vs RETURNS ----------
+    # ---------- PLOT 3: QUANTITY SOLD vs RETURNS ----------
     with col3:
         blue_title("Promotion Effect on Quantity Sold vs Returns (Quality Check)")
 
-        # ---- COLUMN MAPPING ----
         col_promo = "promo_transaction_id"
         col_qty_sold = "promo_total_quantity_sold"
         col_qty_returned = "returns_quantity_returned"
 
-        # ---- AGGREGATE PROMO-LEVEL QUANTITIES ----
         promo_qty = (
             df[df[col_promo].notna()]
             .groupby(col_promo)
@@ -2812,32 +3446,37 @@ elif eda_option == "Promotion Effectiveness":
             .dropna()
         )
 
-        # ---- SELECT TOP PROMOTIONS (BY SOLD QTY) ----
-        TOP_N = 15   # you can set 5–10
+        TOP_N = 15
         top_promo_qty = (
             promo_qty
             .sort_values("total_quantity_sold", ascending=False)
             .head(TOP_N)
         )
 
-        # ---- BAR PLOT ----
         x = np.arange(len(top_promo_qty))
         width = 0.35
 
         fig, ax = plt.subplots(figsize=(8, 4))
 
+        # 🔑 THEME
+        fig.patch.set_facecolor(GREEN_BG)
+        ax.set_facecolor(GREEN_BG)
+        fig.subplots_adjust(left=0.08, right=0.98, top=0.92, bottom=0.18)
+
         ax.bar(
             x - width/2,
             top_promo_qty["total_quantity_sold"],
             width,
-            label="Quantity Sold"
+            label="Quantity Sold",
+            color=BAR_BLUE
         )
 
         ax.bar(
             x + width/2,
             top_promo_qty["total_quantity_returned"],
             width,
-            label="Quantity Returned"
+            label="Quantity Returned",
+            color="#EF4444"
         )
 
         ax.set_xticks(x)
@@ -2850,12 +3489,13 @@ elif eda_option == "Promotion Effectiveness":
         ax.set_xlabel("Promotion ID")
         ax.set_ylabel("Quantity")
         ax.legend()
-        ax.grid(axis="y", linestyle="--", alpha=0.4)
+        ax.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
+
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
 
         st.pyplot(fig)
         plt.close(fig)
-
-
 
 
     # ---------- PLOT 4: PROMO COST vs UPLIFT REVENUE ----------
@@ -2873,18 +3513,25 @@ elif eda_option == "Promotion Effectiveness":
 
         fig, ax = plt.subplots(figsize=(7, 4))
 
+        # 🔑 THEME
+        fig.patch.set_facecolor(GREEN_BG)
+        ax.set_facecolor(GREEN_BG)
+        fig.subplots_adjust(left=0.08, right=0.98, top=0.92, bottom=0.28)
+
         ax.bar(
             x - width/2,
             promo_compare["promo_cost"],
             width,
-            label="Promotion Cost"
+            label="Promotion Cost",
+            color=BAR_BLUE
         )
 
         ax.bar(
             x + width/2,
             promo_compare["uplift_revenue"],
             width,
-            label="Uplift Revenue"
+            label="Uplift Revenue",
+            color="#10B981"
         )
 
         ax.set_xticks(x)
@@ -2897,10 +3544,14 @@ elif eda_option == "Promotion Effectiveness":
         ax.set_xlabel("Promotion ID")
         ax.set_ylabel("Amount")
         ax.legend()
-        ax.grid(axis="y", linestyle="--", alpha=0.4)
+        ax.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
+
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
 
         st.pyplot(fig)
         plt.close(fig)
+
 
 
 elif eda_option == "Event Impact Analysis":
@@ -3014,9 +3665,14 @@ elif eda_option == "Event Impact Analysis":
         .sort_values("sales_uplift", ascending=False)
         .head(TOP_N)
     )
+    # ================= THEME COLORS (DEFINE ONCE) =================
+    GREEN_BG = "#00D05E"
+    GRID_GREEN = "#3B3B3B"
+
+    BAR_BLUE = "#001F5C"
 
     # =========================================================
-    # ROW 1 — EXISTING PLOTS (NO LOGIC CHANGE)
+    # ROW 1 — EXISTING PLOTS (THEMED ONLY)
     # =========================================================
     col1, col2 = st.columns(2)
 
@@ -3026,38 +3682,64 @@ elif eda_option == "Event Impact Analysis":
 
         fig, ax = plt.subplots(figsize=(7, 4))
 
+        # 🔑 THEME
+        fig.patch.set_facecolor(GREEN_BG)
+        ax.set_facecolor(GREEN_BG)
+        fig.subplots_adjust(left=0.08, right=0.98, top=0.92, bottom=0.28)
+
         ax.bar(
             top_events.index.astype(str),
             top_events["sales_uplift"],
-            alpha=0.85
+            alpha=0.85,
+            color=BAR_BLUE
         )
 
         ax.axhline(0, color="black", linewidth=1)
         ax.set_xlabel("Event ID")
         ax.set_ylabel("Average Sales Uplift")
         ax.tick_params(axis="x", rotation=45)
-        ax.grid(axis="y", linestyle="--", alpha=0.4)
+        ax.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
+
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
 
         st.pyplot(fig)
         plt.close(fig)
 
-    # ---------- PLOT 2: EVENT EFFECTIVENESS (VOLUME vs IMPACT %) ----------
+
+    # ---------- PLOT 2: EVENT EFFECTIVENESS ----------
     with col2:
         blue_title("Event Effectiveness: Demand vs Impact")
 
         fig, ax = plt.subplots(figsize=(7, 4))
+
+        # 🔑 THEME
+        fig.patch.set_facecolor(GREEN_BG)
+        ax.set_facecolor(GREEN_BG)
+        fig.subplots_adjust(left=0.10, right=0.98, top=0.92, bottom=0.17)
 
         ax.scatter(
             top_events["total_quantity"],
             top_events["impact_pct"],
             s=top_events["total_sales"] / 1500,
             alpha=0.75,
+            color=BAR_BLUE,
             edgecolors="black",
             linewidth=0.5
         )
 
-        ax.axvline(top_events["total_quantity"].median(), linestyle="--", alpha=0.5)
-        ax.axhline(top_events["impact_pct"].median(), linestyle="--", alpha=0.5)
+        ax.axvline(
+            top_events["total_quantity"].median(),
+            linestyle="--",
+            color=GRID_GREEN,
+            alpha=0.6
+        )
+        ax.axhline(
+            top_events["impact_pct"].median(),
+            linestyle="--",
+            color=GRID_GREEN,
+            alpha=0.6
+        )
 
         top_labels = top_events.sort_values(
             "sales_uplift", ascending=False
@@ -3074,13 +3756,17 @@ elif eda_option == "Event Impact Analysis":
 
         ax.set_xlabel("Total Quantity Sold During Event")
         ax.set_ylabel("Average Sales Impact (%)")
-        ax.grid(True, linestyle="--", alpha=0.3)
+        ax.grid(True, linestyle="-", color=GRID_GREEN, alpha=0.5)
+
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
 
         st.pyplot(fig)
         plt.close(fig)
 
+
     # =========================================================
-    # ROW 2 — NEW 2D BAR PLOTS (INSIGHT-DRIVEN)
+    # ROW 2 — NEW 2D BAR PLOTS (THEMED)
     # =========================================================
     col3, col4 = st.columns(2)
 
@@ -3093,18 +3779,25 @@ elif eda_option == "Event Impact Analysis":
 
         fig, ax = plt.subplots(figsize=(8, 4))
 
+        # 🔑 THEME
+        fig.patch.set_facecolor(GREEN_BG)
+        ax.set_facecolor(GREEN_BG)
+        fig.subplots_adjust(left=0.08, right=0.98, top=0.92, bottom=0.25)
+
         ax.bar(
             x - width/2,
             top_events["sales_before"],
             width,
-            label="Sales Before Event"
+            label="Sales Before Event",
+            color=BAR_BLUE
         )
 
         ax.bar(
             x + width/2,
             top_events["sales_after"],
             width,
-            label="Sales After Event"
+            label="Sales After Event",
+            color="#649283"
         )
 
         ax.set_xticks(x)
@@ -3117,10 +3810,14 @@ elif eda_option == "Event Impact Analysis":
         ax.set_xlabel("Event ID")
         ax.set_ylabel("Average Sales Amount")
         ax.legend()
-        ax.grid(axis="y", linestyle="--", alpha=0.4)
+        ax.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
+
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
 
         st.pyplot(fig)
         plt.close(fig)
+
 
     # ---------- PLOT 4: EVENT INFLUENCE BREAKDOWN ----------
     with col4:
@@ -3131,18 +3828,25 @@ elif eda_option == "Event Impact Analysis":
 
         fig, ax = plt.subplots(figsize=(8, 4))
 
+        # 🔑 THEME
+        fig.patch.set_facecolor(GREEN_BG)
+        ax.set_facecolor(GREEN_BG)
+        fig.subplots_adjust(left=0.08, right=0.98, top=0.92, bottom=0.28)
+
         ax.bar(
             x - width/2,
             top_events["weather_score"],
             width,
-            label="Weather Influence"
+            label="Weather Influence",
+            color=BAR_BLUE
         )
 
         ax.bar(
             x + width/2,
             top_events["trend_score"],
             width,
-            label="Trend Influence"
+            label="Trend Influence",
+            color="#F59E0B"
         )
 
         ax.set_xticks(x)
@@ -3155,10 +3859,14 @@ elif eda_option == "Event Impact Analysis":
         ax.set_xlabel("Event ID")
         ax.set_ylabel("Influence Score")
         ax.legend()
-        ax.grid(axis="y", linestyle="--", alpha=0.4)
+        ax.grid(axis="y", linestyle="-", color=GRID_GREEN, alpha=0.5)
+
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
 
         st.pyplot(fig)
         plt.close(fig)
+
 
 
 elif eda_option == "Summary Report":
@@ -3221,7 +3929,7 @@ elif eda_option == "Summary Report":
             line-height:1.7;
         ">
 
-        <h4>📊 Data Health & Readiness</h4>
+        <h4>Data Health & Readiness</h4>
         <ul>
             <li>The dataset consists of <b>942 rows and 96 columns</b>, offering rich coverage across products, customers, stores, channels, promotions, and events.</li>
             <li><b>No duplicate records</b> were detected, ensuring transactional integrity.</li>
@@ -3229,14 +3937,14 @@ elif eda_option == "Summary Report":
             <li>Data types are well balanced (categorical, numeric, datetime), confirming the dataset is <b>model-ready</b>.</li>
         </ul>
 
-        <h4>💰 Overall Sales Performance</h4>
+        <h4>Overall Sales Performance</h4>
         <ul>
             <li>Sales over time exhibit <b>sharp spikes</b>, with several days exceeding <b>₹400K–₹600K</b>, indicating event-driven and promotional demand.</li>
             <li>Revenue distribution is highly uneven, validating the need for deeper segmentation.</li>
             <li>Store-wise and channel-wise sales confirm that a subset of entities drives the majority of revenue.</li>
         </ul>
 
-        <h4>📦 Product-Level Insights</h4>
+        <h4> Product-Level Insights</h4>
         <ul>
             <li>Revenue contribution is strongly concentrated — products such as <b>P_000034, P_000029, and P_000019</b> dominate total revenue.</li>
             <li>Demand vs profitability analysis shows <b>no linear relationship</b> between volume and profit.</li>
@@ -3245,7 +3953,7 @@ elif eda_option == "Summary Report":
             <li>Stock damaged quantities for several top sellers reveal <b>operational loss exposure</b>.</li>
         </ul>
 
-        <h4>👥 Customer-Level Behavior</h4>
+        <h4> Customer-Level Behavior</h4>
         <ul>
             <li>A small group of customers contributes a <b>disproportionate share of revenue</b>, led by <b>C_000034 and C_000029</b>.</li>
             <li>Loyalty contribution varies widely and does not scale proportionally with revenue.</li>
@@ -3253,7 +3961,7 @@ elif eda_option == "Summary Report":
             <li>Customer satisfaction declines as inactivity increases, with the <b>181–365 day</b> segment showing the lowest satisfaction.</li>
         </ul>
 
-        <h4>🏬 Store-Level Performance</h4>
+        <h4> Store-Level Performance</h4>
         <ul>
             <li>Revenue is concentrated in a few stores, notably <b>S_000034 and S_000029</b>.</li>
             <li>Store-wise product mix varies significantly, confirming <b>localized demand patterns</b>.</li>
@@ -3261,7 +3969,7 @@ elif eda_option == "Summary Report":
             <li>High unit sales do not always translate into proportional revenue, highlighting efficiency gaps.</li>
         </ul>
 
-        <h4>🛒 Sales Channel Analysis</h4>
+        <h4>Sales Channel Analysis</h4>
         <ul>
             <li>Revenue contribution is dominated by channels such as <b>CH_000034 (10.9%)</b> and <b>CH_000029 (10.0%)</b>.</li>
             <li>Average order value varies significantly across channels, ranging roughly from <b>₹1.8K to ₹4.3K</b>.</li>
@@ -3269,7 +3977,7 @@ elif eda_option == "Summary Report":
             <li>This confirms the need for <b>channel-specific pricing, promotion, and inventory strategies</b>.</li>
         </ul>
 
-        <h4>🎯 Promotion Effectiveness</h4>
+        <h4> Promotion Effectiveness</h4>
         <ul>
             <li>Promotion-level analysis shows that <b>not all high-cost promotions are profitable</b>.</li>
             <li>Promotions such as <b>T_000044 and T_000024</b> generate the highest net uplift revenue.</li>
@@ -3277,7 +3985,7 @@ elif eda_option == "Summary Report":
             <li>Sales vs cost scatter clearly separates <b>efficient promotions from underperformers</b>.</li>
         </ul>
 
-        <h4>🎉 Event Impact Analysis</h4>
+        <h4>Event Impact Analysis</h4>
         <ul>
             <li>Events consistently show <b>higher sales after impact</b> compared to before.</li>
             <li>Events like <b>E_000028 and E_000039</b> produce the highest average sales uplift.</li>
@@ -3285,14 +3993,14 @@ elif eda_option == "Summary Report":
             <li>Influence breakdown reveals that some events are <b>trend-driven</b>, while others are <b>weather-sensitive</b>.</li>
         </ul>
 
-        <h4>🔗 Cross-Dimensional Insights</h4>
+        <h4> Cross-Dimensional Insights</h4>
         <ul>
             <li>Revenue and demand are concentrated across products, customers, stores, and channels.</li>
             <li>Discounts, returns, and damaged stock act as <b>hidden profitability leakages</b>.</li>
             <li>Events and promotions introduce strong non-linear effects on demand.</li>
         </ul>
 
-        <h4>✅ Final Takeaway</h4>
+        <h4> Final Takeaway</h4>
         <ul>
             <li>The dataset is <b>clean, consistent, and enterprise-grade</b>.</li>
             <li>Clear demand drivers and inefficiencies are observable across multiple dimensions.</li>
