@@ -5,6 +5,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import io
 import numpy as np
+from utils.html_table import render_html_table
+import streamlit as st
+import altair as alt
 
 
 st.set_page_config(page_title="SupplySyncAI – MLOps UI", layout="wide")
@@ -39,6 +42,81 @@ header {
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+
+/* =========================================
+   RADIO CONTAINER – FULL WIDTH
+   ========================================= */
+div.stRadio {
+    width: 100%;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* =========================================
+   Teal WRAP BOX – FULL PAGE WIDTH
+   ========================================= */
+div.stRadio > div {
+    background-color:  #0D9488;
+    padding: 16px 400px;
+    border-radius: 8px;
+    width: 100%;              
+    box-sizing: border-box;
+}
+
+/* =========================================
+   RADIO GROUP ALIGNMENT
+   ========================================= */
+div[data-baseweb="radio-group"] {
+    display: flex;
+    justify-content: center;  /* center options inside */
+}
+
+/* =========================================
+   RADIO OPTION TEXT
+   ========================================= */
+/* RADIO LABEL TEXT – FORCE WHITE */
+div[data-baseweb="radio"] label,
+div[data-baseweb="radio"] label span {
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    color: #FFFFFF !important;
+}
+
+
+/* =========================================
+   SPACE BETWEEN OPTIONS
+   ========================================= */
+div[data-baseweb="radio"] {
+    margin-right: 28px;
+}
+
+          
+
+</style>
+""", unsafe_allow_html=True)
+
+
+st.markdown(""" 
+ <style> /* Expander outer card */ 
+    div[data-testid="stExpander"]
+        { background-color: #2F75B5;
+        border-radius: 20px; 
+        border: 1px solid #9EDAD0; 
+        overflow: hidden; /* 🔑 fixes unfinished edges */ }
+    /* Hide expander header completely */
+    div[data-testid="stExpander"]:nth-of-type(1)
+             summary { display: none; }
+    /* Inner content padding fix */
+     div[data-testid="stExpander"]:nth-of-type(1) > 
+            div { padding: 22px 18px; } 
+            </style> """, unsafe_allow_html=True)
+
+
+
+
+
 
 
 st.markdown(
@@ -67,55 +145,77 @@ st.markdown("""
 <style>
 
 /* =========================================
-   SUMMARY GRID (TABLE-LIKE, COMPACT)
+   SUMMARY GRID (CENTERED, SMALL, EQUAL BOXES)
    ========================================= */
-
 .summary-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, max-content));
-    gap: 8px;                      /* tighter like tables */
-    margin: 10px 0 16px 0;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin: 6px 0 10px 0;
     justify-content: center;
+    
 }
 
 /* =========================================
-   SUMMARY CELL (TABLE STYLE)
+   SUMMARY CARD (TABLE CONTAINER)
    ========================================= */
-
 .summary-card {
-    background-color: #F9FAFB;     /* table header background */
-    border: 1px solid #D0D7DE;     /* thin table border */
-    border-radius: 0px;            /* sharp edges (table feel) */
-    padding: 10px 14px;            /* compact spacing */
+    border: 2px solid #6B7280;
+    border-radius: 2px;
+    background-color: #E5E7EB;
+    overflow: hidden;
     text-align: center;
-    min-width: 220px;
 }
 
 /* =========================================
-   HEADER TEXT (LIKE TABLE HEADER)
+   HEADER ROW (NO WRAP, SAME HEIGHT)
    ========================================= */
-
 .summary-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #57606A;                /* muted header color */
-    margin-bottom: 4px;
+    background-color: #9CA3AF;
+    color: #000000;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 8px 6px;
+    border-bottom: 1px solid #6B7280;
+
+    white-space: nowrap;       /* 🔥 stop wrapping */
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* =========================================
-   VALUE TEXT (TABLE CELL VALUE)
+   VALUE CELL (COMPACT)
    ========================================= */
-
 .summary-value {
-    font-size: 16px;
-    font-weight: 700;
-    color: #24292F;
+    font-size: 22px;
+    font-weight: 600;
+    color: #000000;
+    padding: 1px 0;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 
+st.markdown("""
+<style>
+/* Outer gray wrap */
+.gray-analytics-wrap {
+    background-color: #E6E6E6;
+    padding: 16px 400px;
+    border-radius: 8px;
+    width: 100%;              
+    box-sizing: border-box;
+}
+
+/* Inner blue analytics bar */
+.analytics-container {
+    background-color:#1F6FB2;
+    padding:18px;
+    border-radius:14px;
+}
+</style>
+""", unsafe_allow_html=True)
 
 
 
@@ -291,17 +391,15 @@ df = st.session_state.df
 
 if df is not None:
     st.markdown(
-    "<h3 style='color:#000000;'>🔍 Data Preview</h3>",
+    "<h3 style='color:#000000;'>Data Preview</h3>",
     unsafe_allow_html=True
 )
 
-    st.data_editor(
-    df.head(10),
-    use_container_width=True,
-    disabled=True
-)
-
-
+    render_html_table(
+        df.head(20),
+        max_height=260
+    )
+    
 
     st.info(f"**Shape:** {df.shape[0]} rows × {df.shape[1]} columns")
 else:
@@ -372,18 +470,28 @@ df = st.session_state.df
 # ------------------------------------------------------------
 # STEP SELECTOR (SEQUENTIAL CONTROL)
 # ------------------------------------------------------------
+st.markdown(
+    "<div style='font-size:20px; font-weight:600; margin-bottom:8px;'>"
+    "Select a Data Pre-Processing Step"
+    "</div>",
+    unsafe_allow_html=True
+)
+st.write("")
+
 
 step = st.radio(
-    "Select a Data Pre-Processing Step",
+    "",
     [
         "Remove Duplicate Rows",
         "Remove Outliers",
         "Replace Missing Values"
-        
     ],
     index=None,
-    horizontal=True
+    horizontal=True,
+    label_visibility="collapsed"
+
 )
+
 
 # ============================================================
 # 1️⃣ REMOVE DUPLICATE ROWS
@@ -392,6 +500,7 @@ step = st.radio(
 if step == "Remove Duplicate Rows":
 
     st.markdown("### Remove Duplicate Rows")
+    st.write("")
 
     st.markdown("""
 <div style="
@@ -441,7 +550,8 @@ leading to <b>over-forecasting</b>.
 
 
     if st.button("Apply Duplicate Row Removal"):
-
+        st.write("")
+        st.write("")
         # Prevent re-run
         if st.session_state.dup_removed_df is not None:
             st.info("Duplicate rows were already removed earlier.")
@@ -482,7 +592,8 @@ leading to <b>over-forecasting</b>.
         before_df = st.session_state.dup_before_df   # 🔒 frozen
         after_df = st.session_state.dup_after_df     # 🔒 frozen
         removed_df = st.session_state.dup_removed_df     
-        st.markdown("#### 🧾 Duplicate Removal Summary")
+        st.markdown("####  Duplicate Removal Summary")
+        st.write("")
         st.markdown("""
         <div class="summary-grid">
             <div class="summary-card">
@@ -504,24 +615,44 @@ leading to <b>over-forecasting</b>.
             removed_df.shape[0]
         ), unsafe_allow_html=True)
 
-
+        st.markdown("<br>", unsafe_allow_html=True)
         # ===== BEFORE =====
         st.markdown(
-            f"#### 📌 Before Duplicate Removal ({before_df.shape[0]} Rows)"
+            f"#### Before Duplicate Removal ({before_df.shape[0]} Rows)"
         )
-        st.dataframe(before_df, use_container_width=True)
+        st.write("")
+        render_html_table(
+            before_df,
+            title=None,
+            max_height=300
+        )
+
+        st.markdown("<br>", unsafe_allow_html=True)
 
         # ===== AFTER =====
         st.markdown(
-            f"#### ✅ After Duplicate Removal ({after_df.shape[0]} Rows)"
+            f"####  After Duplicate Removal ({after_df.shape[0]} Rows)"
         )
-        st.dataframe(after_df, use_container_width=True)
+        st.write("")
+        render_html_table(
+            after_df,
+            title=None,
+            max_height=300
+        )
+
+        st.markdown("<br>", unsafe_allow_html=True)
 
         # ===== REMOVED =====
         st.markdown(
-            f"#### ❌  Duplicates Removed ({removed_df.shape[0]} Rows)"
+            f"#### Duplicates Removed ({removed_df.shape[0]} Rows)"
         )
-        st.dataframe(removed_df, use_container_width=True)
+        st.write("")
+        render_html_table(
+            removed_df,
+            title=None,
+            max_height=300  # smaller is fine here
+        )
+
 
 
     # ============================================================
@@ -530,6 +661,7 @@ leading to <b>over-forecasting</b>.
 if step == "Remove Outliers":
 
     st.markdown("### Remove Outliers")
+    st.write("")
 
     st.markdown("""
     <div style="
@@ -667,7 +799,7 @@ if step == "Remove Outliers":
             st.session_state.df = after_df
             st.session_state.preprocessing_completed = True
 
-            st.success("✔ Outliers handled successfully (aggressive mode)")
+            st.success("Outliers handled successfully")
 
     # --------------------------------------------------
     # OUTPUT SECTION (UNCHANGED)
@@ -678,7 +810,8 @@ if step == "Remove Outliers":
         after_df = st.session_state.out_after_df
         removed_df = st.session_state.out_removed_df
 
-        st.markdown("#### 🧾 Outlier Removal Summary")
+        st.markdown("####  Outlier Removal Summary")
+        st.write("")
         st.markdown("""
         <div class="summary-grid">
             <div class="summary-card">
@@ -699,15 +832,26 @@ if step == "Remove Outliers":
             after_df.shape[0],
             removed_df.shape[0]
         ), unsafe_allow_html=True)
+        st.write("")
+            # ===== BEFORE =====
+        st.markdown(f"#### Before Outlier Handling ({before_df.shape[0]} Rows)")
+        st.write("")
+        render_html_table(before_df, max_height=300)
+        st.write("")
 
-        st.markdown(f"#### 📌 Before Outlier Handling ({before_df.shape[0]} Rows)")
-        st.dataframe(before_df, use_container_width=True)
+        # ===== AFTER =====
+        st.markdown(f"#### After Outlier Handling ({after_df.shape[0]} Rows)")
+        st.write("")
+        render_html_table(after_df, max_height=300)
+        
 
-        st.markdown(f"#### ✅ After Outlier Handling ({after_df.shape[0]} Rows)")
-        st.dataframe(after_df, use_container_width=True)
+        st.markdown("<br>", unsafe_allow_html=True)
 
-        st.markdown(f"#### ❌ Outliers Removed ({removed_df.shape[0]} Rows)")
-        st.dataframe(removed_df, use_container_width=True)
+        # ===== REMOVED =====
+        st.markdown(f"####  Outliers Removed ({removed_df.shape[0]} Rows)")
+        st.write("")
+        render_html_table(removed_df, max_height=300)
+
 
 
 
@@ -718,6 +862,7 @@ if step == "Remove Outliers":
 elif step == "Replace Missing Values":
 
     st.markdown("### Replace Missing Values")
+    st.write("")
 
     st.markdown(
     """
@@ -819,7 +964,7 @@ elif step == "Replace Missing Values":
                 affected_rows_before.index
             ].copy()
 
-            st.success("✔ NULL values replaced with 'Unknown'")
+            st.success(" NULL values replaced with 'Unknown'")
 
 
     # ------------------------------------------------------------
@@ -835,23 +980,49 @@ elif step == "Replace Missing Values":
         before_rows = st.session_state.null_before_rows
         after_rows = st.session_state.null_after_rows
         replaced_cols = st.session_state.null_replaced_cols
-
-        
         # ===================== COLUMNS =====================
-        st.markdown("#### 🧾 Columns Where NULL Values Were Replaced")
-        st.dataframe(replaced_cols, use_container_width=True)
+        st.markdown("####  Columns Where NULL Values Were Replaced")
+        st.write("")
 
+        if not replaced_cols.empty:
+            value_col = replaced_cols.columns[0]
+
+            html_cards = "".join(
+                f"""
+                <div class="summary-card">
+                    <div class="summary-title">{str(idx).replace('_', ' ').title()}</div>
+                    <div class="summary-value">{row[value_col]}</div>
+                </div>
+                """
+                for idx, row in replaced_cols.iterrows()
+            )
+
+            st.markdown(
+                f"""
+                <div class="summary-grid">
+                
+                    {html_cards}
+                </div>
+                """,
+                unsafe_allow_html=True   # 🔥 THIS IS CRITICAL
+            )
+        else:
+            st.info("No NULL values were replaced.")
+
+        st.write("")
         # ===================== BEFORE =====================
         st.markdown(
-            f"#### 📌 Rows Before Missing Values Replacement ({before_rows.shape[0]} Rows)"
+            f"#### Rows Before Missing Values Replacement ({before_rows.shape[0]} Rows)"
         )
-        st.dataframe(before_rows, use_container_width=True)
-
+        st.write("")
+        render_html_table(before_rows)
+        
         # ===================== AFTER =====================
         st.markdown(
-            f"#### ✅ Rows After Missing Values Replacement ({after_rows.shape[0]} Rows)"
+            f"####  Rows After Missing Values Replacement ({after_rows.shape[0]} Rows)"
         )
-        st.dataframe(after_rows, use_container_width=True)
+        st.write("")
+        render_html_table(after_rows)
 
 
 
@@ -925,7 +1096,7 @@ div[data-baseweb="radio"] input:checked + div {
 /* Individual card */
 .quality-card {
     flex: 1;
-    background-color: #FFFFFF;
+    background-color: white;
     border-radius: 12px;
     padding: 16px 18px;
     box-shadow: 0px 2px 8px rgba(0,0,0,0.06);
@@ -937,12 +1108,10 @@ div[data-baseweb="radio"] input:checked + div {
 .quality-title {
     font-size: 15px;
     font-weight: 600;
-    color: #1F4E79;
-
-    background-color: #EAF2FB;   /* exact light blue strip */
+    color: #ffffff;
+    background-color:#123A72;
     padding: 10px 14px;
     border-radius: 6px;
-
     margin-bottom: 18px;
 }
 
@@ -950,6 +1119,48 @@ div[data-baseweb="radio"] input:checked + div {
 .table-scroll {
     max-height: 260px;
     overflow-y: auto;
+}
+
+/* ===============================
+   TABLE APPEARANCE (NO RENAMES)
+   =============================== */
+
+.quality-card table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #FFFFFF;
+    font-size: 14px;
+}
+
+/* Table header */
+.quality-card th {
+    background-color: #E5ECF4;   /* slightly darker */
+    color: #1F2937;
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid #D6DEE8;
+}
+
+/* Table cells */
+.quality-card td {
+    padding: 9px 12px;
+    color: #111827;
+    border-bottom: 1px solid #EEF2F7;
+}
+
+/* Zebra rows (LIKE IMAGE) */
+.quality-card tr:nth-child(even) td {
+    background-color: #FFFFFF;
+}
+
+.quality-card tr:nth-child(odd) td {
+    background-color: #F3F6FA;
+}
+
+/* Subtle hover */
+.quality-card tr:hover td {
+    background-color: #E9F1FF;
 }
 
 
@@ -987,6 +1198,64 @@ div[data-baseweb="radio"] input:checked + div {
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown(""" 
+            <style> /* OUTER EXPANDER (main rounded container) */ 
+            div[data-testid="stExpander"]
+             { background-color: #00D05E !important; 
+            /* green */ border-radius: 18px;
+             border: none !important; 
+            box-shadow: none !important;
+             outline: none !important; 
+            padding: 6px; }
+             /* REMOVE focus / active outlines */ 
+            div[data-testid="stExpander"]:focus,
+             div[data-testid="stExpander"]:focus-within
+             { outline: none !important; 
+            box-shadow: none !important; }
+             /* EXPANDER HEADER (kills thin divider line) */ 
+            div[data-testid="stExpander"] summary 
+            { border: none !important;
+             outline: none !important; } 
+            /* INNER EXPANDER CONTENT */ 
+            div[data-testid="stExpander"] >
+             div { background-color: #0F3D2E !important;
+             /* dark green */ border-radius: 14px;
+             border: none !important;
+             box-shadow: none !important;
+             outline: none !important;
+             padding: 18px 22px 26px 22px; }
+             /* REMOVE any residual outlines inside */ 
+            div[data-testid="stExpander"] * { outline: none !important; } 
+            </style> """, unsafe_allow_html=True)
+
+
+
+
+# Global transparent theme
+def transparent_theme():
+    return {
+        "config": {
+            "background": "transparent",
+            "view": {
+                "fill": "transparent",
+                "stroke": "transparent"
+            },
+            "axis": {
+                "labelColor": "rgba(255,255,255,0.8)",
+                "titleColor": "rgba(255,255,255,0.9)",
+                "gridColor": "rgba(255,255,255,0.25)",
+                "domainColor": "rgba(255,255,255,0.4)"
+            },
+            "text": {"color": "white"}
+        }
+    }
+
+alt.themes.register("transparent_theme", transparent_theme)
+alt.themes.enable("transparent_theme")
+
+
+
+
 
 
 # ============================================================
@@ -1021,9 +1290,9 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
+st.write("")
 st.info(f"Dataset Loaded: **{df.shape[0]} rows × {df.shape[1]} columns**")
-
+st.write("")
 # ---------------- EDA INTRO CARD ----------------
 st.markdown(
     """
@@ -1091,7 +1360,13 @@ num_df = df.select_dtypes(include=np.number)
 # EDA NAVIGATION (INSTANT COLOR CHANGE)
 # =========================
 
-st.markdown("### 📊 Select Analysis")
+st.markdown("###  List of Analytics")
+st.markdown(
+    "<div style='margin-top:6px'></div>",
+    unsafe_allow_html=True
+)
+
+
 
 if "eda_option" not in st.session_state:
     st.session_state.eda_option = None
@@ -1104,7 +1379,8 @@ def nav_button(label, value):
         st.markdown(
             f"""
             <div style="
-                background-color:#2F75B5;
+                background-color:#4F97EE
+;
                 color:white;
                 padding:14px;
                 border-radius:10px;
@@ -1121,34 +1397,40 @@ def nav_button(label, value):
         if st.button(label, use_container_width=True):
             st.session_state.eda_option = value
             st.rerun() 
-            
 
+with st.expander(" ", expanded=True):
+    row1 = st.columns(5)
+    row2 = st.columns(4)
 
-# ---------- BUTTON GRID ----------
-col1, col2, col3 = st.columns(3)
+    with row1[0]:
+        nav_button("Data Quality Overview", "Data Quality Overview")
+    with row1[1]:
+        nav_button("Sales Overview", "Sales Overview")
+    with row1[2]:
+        nav_button("Promotion Effectiveness", "Promotion Effectiveness")
+    with row1[3]:
+        nav_button("Product-Level Analysis", "Product-Level Analysis")
+    with row1[4]:
+        nav_button("Customer-Level Analysis", "Customer-Level Analysis")
 
-with col1:
-    nav_button("Data Quality Overview", "Data Quality Overview")
-    nav_button("Product-Level Analysis", "Product-Level Analysis")
-    nav_button("Store-Level Analysis", "Store-Level Analysis")
-
-with col2:
-    nav_button("Sales Overview", "Sales Overview")
-    nav_button("Customer-Level Analysis", "Customer-Level Analysis")
-    nav_button("Sales Channel Analysis", "Sales Channel Analysis")
-
-with col3:
-    nav_button("Promotion Effectiveness", "Promotion Effectiveness")
-    nav_button("Event Impact Analysis", "Event Impact Analysis")
-    nav_button("Summary Report", "Summary Report")
+    with row2[0]:
+        nav_button("Event Impact Analysis", "Event Impact Analysis")
+    with row2[1]:
+        nav_button("Store-Level Analysis", "Store-Level Analysis")
+    with row2[2]:
+        nav_button("Sales Channel Analysis", "Sales Channel Analysis")
+    with row2[3]:
+        nav_button("Summary Report", "Summary Report")
 
 
 eda_option = st.session_state.eda_option
-
-
+st.markdown(
+    "<div style='margin-top:6px'></div>",
+    unsafe_allow_html=True
+)
 
 if eda_option is None:
-    st.info("👆 Select an analysis to view insights.")
+    st.info("Select an analysis to view insights.")
     st.stop()
 
 
@@ -1205,7 +1487,7 @@ if eda_option == "Data Quality Overview":
     # =========================
     rows_count = df.shape[0]
     cols_count = df.shape[1]
-
+    
     dup_count = df.duplicated().sum()
     dtype_counts = df.dtypes.value_counts()
 
@@ -1326,146 +1608,229 @@ elif eda_option == "Sales Overview":
     """,
     unsafe_allow_html=True
 )
-    st.markdown("### 📊 Sales Overview")
+    st.markdown("###  Sales Overview")
 
-    # ---------- ROW 1 ----------
+        # ---------- ROW 1 ----------
     st.markdown(
-    """
-    <div class="summary-grid">
-        <div class="summary-card">
-            <div class="summary-title">Total Revenue</div>
-            <div class="summary-value">{}</div>
+        """
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-title">Total Revenue</div>
+                <div class="summary-value">{}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Average Order Value</div>
+                <div class="summary-value">{}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Maximum Order Value</div>
+                <div class="summary-value">{}</div>
+            </div>
         </div>
-        <div class="summary-card">
-            <div class="summary-title">Average Order Value</div>
-            <div class="summary-value">{}</div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-title">Maximum Order Value</div>
-            <div class="summary-value">{}</div>
-        </div>
-    </div>
-    """.format(
-        f"${df[col_rev].sum():,.2f}" if col_rev else "NA",
-        f"${df[col_rev].mean():,.2f}" if col_rev else "NA",
-        f"${df[col_rev].max():,.2f}" if col_rev else "NA",
-    ),
-    unsafe_allow_html=True
-    )
+        """.format(
+            f"${df[col_rev].sum():,.2f}" if col_rev else "NA",
+            f"${df[col_rev].mean():,.2f}" if col_rev else "NA",
+            f"${df[col_rev].max():,.2f}" if col_rev else "NA",
+        ),
+        unsafe_allow_html=True
+        )
 
-    # ---------- ROW 2 ----------
+        # ---------- ROW 2 ----------
     st.markdown(
-    """
-    <div class="summary-grid">
-        <div class="summary-card">
-            <div class="summary-title">Total Sales</div>
-            <div class="summary-value">{}</div>
+        """
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-title">Total Sales</div>
+                <div class="summary-value">{}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Total Units Sold</div>
+                <div class="summary-value">{}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Average Units / Transaction</div>
+                <div class="summary-value">{}</div>
+            </div>
         </div>
-        <div class="summary-card">
-            <div class="summary-title">Total Units Sold</div>
-            <div class="summary-value">{}</div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-title">Average Units / Transaction</div>
-            <div class="summary-value">{}</div>
-        </div>
-    </div>
-    """.format(
-        f"${(df[col_qty] * df[col_price]).sum():,.2f}" if col_qty and col_price else "NA",
-        f"{df[col_qty].sum():,}" if col_qty else "NA",
-        f"{df[col_qty].mean():.2f}" if col_qty else "NA",
-    ),
-    unsafe_allow_html=True
-    )
+        """.format(
+            f"${(df[col_qty] * df[col_price]).sum():,.2f}" if col_qty and col_price else "NA",
+            f"{df[col_qty].sum():,}" if col_qty else "NA",
+            f"{df[col_qty].mean():.2f}" if col_qty else "NA",
+        ),
+        unsafe_allow_html=True
+        )
 
+    st.write("")
+    st.write("")
 
 
     if "created_at" in df.columns and col_rev:
-        st.markdown(
-    """
-    <div style="
-        background-color:#2F75B5;
-        padding:18px 25px;
-        border-radius:10px;
-        font-size:20px;
-        color:white;
-        margin-top:20px;
-        margin-bottom:10px;
-        text-align:center;
-    ">
-        <b>Sales By Time</b>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+   
+            st.markdown(
+        """
+        <div style="
+            background-color:#2F75B5;
+            padding:18px 25px;
+            border-radius:10px;
+            font-size:20px;
+            color:white;
+            margin-top:20px;
+            margin-bottom:10px;
+            text-align:center;
+        ">
+            <b>Sales By Year</b>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
+    df = df.dropna(subset=["created_at"])
 
-        # Convert to datetime safely
-        df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
+    df["Year"] = df["created_at"].dt.year
+    df["Quarter"] = df["created_at"].dt.to_period("Q").astype(str)
+    df["Month"] = df["created_at"].dt.to_period("M").astype(str)
 
-        # Aggregate sales by date
-        sales_time = (
-            df.groupby(df["created_at"].dt.date)[col_rev]
-            .sum()
-            .sort_index()
+    sales_by_year = (
+        df.groupby("Year")[col_rev]
+        .sum()
+        .sort_index()
+    )
+    st.markdown('<div class="chart-only">', unsafe_allow_html=True)
+
+    with st.expander("Sales by Year", expanded=True):
+
+        chart = (
+            alt.Chart(sales_by_year.reset_index())
+            .mark_bar(color="#001F5C")
+            .encode(
+                x=alt.X("Year:O", title="Year"),
+                y=alt.Y(f"{col_rev}:Q", title="Revenue"),
+                tooltip=["Year", col_rev]
+            )
+            .properties(
+                height=380,
+                background="#00D05E"
+            )
+            .configure_view(
+                fill="#00D05E",
+                strokeOpacity=0
+            )
+            .configure_axis(
+                labelColor="#000000",
+                titleColor="#000000",
+                gridColor="rgba(0,0,0,0.2)",
+                domainColor="rgba(0,0,0,0.3)"
+            )
         )
 
-        st.bar_chart(sales_time)
+        st.altair_chart(chart, use_container_width=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown(
+        """
+        <div style="
+            background-color:#2F75B5;
+            padding:18px 25px;
+            border-radius:10px;
+            font-size:20px;
+            color:white;
+            margin-top:20px;
+            margin-bottom:10px;
+            text-align:center;
+        ">
+            <b>Sales By Quaters</b>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    sales_by_quarter = (
+        df.groupby("Quarter")[col_rev]
+        .sum()
+        .sort_index()
+    )
+    st.bar_chart(sales_by_quarter)
+
+    st.markdown(
+        """
+        <div style="
+            background-color:#2F75B5;
+            padding:18px 25px;
+            border-radius:10px;
+            font-size:20px;
+            color:white;
+            margin-top:20px;
+            margin-bottom:10px;
+            text-align:center;
+        ">
+            <b>Sales By Month</b>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    sales_by_month = (
+        df.groupby("Month")[col_rev]
+        .sum()
+        .sort_index()
+    )
+    st.bar_chart(sales_by_month)
+
+
 
 
     if col_store and col_rev:
-        st.markdown(
-    """
-    <div style="
-        background-color:#2F75B5;
-        padding:18px 25px;
-        border-radius:10px;
-        font-size:20px;
-        color:white;
-        margin-top:20px;
-        margin-bottom:10px;
-        text-align:center;
-    ">
-        <b>Sales By Store</b>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+            st.markdown(
+        """
+        <div style="
+            background-color:#2F75B5;
+            padding:18px 25px;
+            border-radius:10px;
+            font-size:20px;
+            color:white;
+            margin-top:20px;
+            margin-bottom:10px;
+            text-align:center;
+        ">
+            <b>Sales By Store</b>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-        sales_store = (
-            df.groupby(col_store)[col_rev]
-            .sum()
-            .sort_values(ascending=False)
-        )
+            sales_store = (
+                df.groupby(col_store)[col_rev]
+                .sum()
+                .sort_values(ascending=False)
+            )
 
-        st.bar_chart(sales_store)
+            st.bar_chart(sales_store)
     if col_channel and col_rev:
-        st.markdown(
-    """
-    <div style="
-        background-color:#2F75B5;
-        padding:18px 25px;
-        border-radius:10px;
-        font-size:20px;
-        color:white;
-        margin-top:20px;
-        margin-bottom:10px;
-        text-align:center;
-    ">
-        <b>Sales By Sales Channels</b>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+            st.markdown(
+        """
+        <div style="
+            background-color:#2F75B5;
+            padding:18px 25px;
+            border-radius:10px;
+            font-size:20px;
+            color:white;
+            margin-top:20px;
+            margin-bottom:10px;
+            text-align:center;
+        ">
+            <b>Sales By Sales Channels</b>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-        sales_channel = (
-            df.groupby(col_channel)[col_rev]
-            .sum()
-            .sort_values(ascending=False)
-        )
+            sales_channel = (
+                df.groupby(col_channel)[col_rev]
+                .sum()
+                .sort_values(ascending=False)
+            )
 
-        st.bar_chart(sales_channel)
-
-
+            st.bar_chart(sales_channel)
 
 elif eda_option == "Product-Level Analysis":
 
@@ -3166,7 +3531,7 @@ elif eda_option == "Summary Report":
             line-height:1.7;
         ">
 
-        <h4>📊 Data Health & Readiness</h4>
+        <h4>Data Health & Readiness</h4>
         <ul>
             <li>The dataset consists of <b>942 rows and 96 columns</b>, offering rich coverage across products, customers, stores, channels, promotions, and events.</li>
             <li><b>No duplicate records</b> were detected, ensuring transactional integrity.</li>
@@ -3174,14 +3539,14 @@ elif eda_option == "Summary Report":
             <li>Data types are well balanced (categorical, numeric, datetime), confirming the dataset is <b>model-ready</b>.</li>
         </ul>
 
-        <h4>💰 Overall Sales Performance</h4>
+        <h4>Overall Sales Performance</h4>
         <ul>
             <li>Sales over time exhibit <b>sharp spikes</b>, with several days exceeding <b>₹400K–₹600K</b>, indicating event-driven and promotional demand.</li>
             <li>Revenue distribution is highly uneven, validating the need for deeper segmentation.</li>
             <li>Store-wise and channel-wise sales confirm that a subset of entities drives the majority of revenue.</li>
         </ul>
 
-        <h4>📦 Product-Level Insights</h4>
+        <h4> Product-Level Insights</h4>
         <ul>
             <li>Revenue contribution is strongly concentrated — products such as <b>P_000034, P_000029, and P_000019</b> dominate total revenue.</li>
             <li>Demand vs profitability analysis shows <b>no linear relationship</b> between volume and profit.</li>
@@ -3190,7 +3555,7 @@ elif eda_option == "Summary Report":
             <li>Stock damaged quantities for several top sellers reveal <b>operational loss exposure</b>.</li>
         </ul>
 
-        <h4>👥 Customer-Level Behavior</h4>
+        <h4> Customer-Level Behavior</h4>
         <ul>
             <li>A small group of customers contributes a <b>disproportionate share of revenue</b>, led by <b>C_000034 and C_000029</b>.</li>
             <li>Loyalty contribution varies widely and does not scale proportionally with revenue.</li>
@@ -3198,7 +3563,7 @@ elif eda_option == "Summary Report":
             <li>Customer satisfaction declines as inactivity increases, with the <b>181–365 day</b> segment showing the lowest satisfaction.</li>
         </ul>
 
-        <h4>🏬 Store-Level Performance</h4>
+        <h4> Store-Level Performance</h4>
         <ul>
             <li>Revenue is concentrated in a few stores, notably <b>S_000034 and S_000029</b>.</li>
             <li>Store-wise product mix varies significantly, confirming <b>localized demand patterns</b>.</li>
@@ -3206,7 +3571,7 @@ elif eda_option == "Summary Report":
             <li>High unit sales do not always translate into proportional revenue, highlighting efficiency gaps.</li>
         </ul>
 
-        <h4>🛒 Sales Channel Analysis</h4>
+        <h4>Sales Channel Analysis</h4>
         <ul>
             <li>Revenue contribution is dominated by channels such as <b>CH_000034 (10.9%)</b> and <b>CH_000029 (10.0%)</b>.</li>
             <li>Average order value varies significantly across channels, ranging roughly from <b>₹1.8K to ₹4.3K</b>.</li>
@@ -3214,7 +3579,7 @@ elif eda_option == "Summary Report":
             <li>This confirms the need for <b>channel-specific pricing, promotion, and inventory strategies</b>.</li>
         </ul>
 
-        <h4>🎯 Promotion Effectiveness</h4>
+        <h4> Promotion Effectiveness</h4>
         <ul>
             <li>Promotion-level analysis shows that <b>not all high-cost promotions are profitable</b>.</li>
             <li>Promotions such as <b>T_000044 and T_000024</b> generate the highest net uplift revenue.</li>
@@ -3222,7 +3587,7 @@ elif eda_option == "Summary Report":
             <li>Sales vs cost scatter clearly separates <b>efficient promotions from underperformers</b>.</li>
         </ul>
 
-        <h4>🎉 Event Impact Analysis</h4>
+        <h4>Event Impact Analysis</h4>
         <ul>
             <li>Events consistently show <b>higher sales after impact</b> compared to before.</li>
             <li>Events like <b>E_000028 and E_000039</b> produce the highest average sales uplift.</li>
@@ -3230,14 +3595,14 @@ elif eda_option == "Summary Report":
             <li>Influence breakdown reveals that some events are <b>trend-driven</b>, while others are <b>weather-sensitive</b>.</li>
         </ul>
 
-        <h4>🔗 Cross-Dimensional Insights</h4>
+        <h4> Cross-Dimensional Insights</h4>
         <ul>
             <li>Revenue and demand are concentrated across products, customers, stores, and channels.</li>
             <li>Discounts, returns, and damaged stock act as <b>hidden profitability leakages</b>.</li>
             <li>Events and promotions introduce strong non-linear effects on demand.</li>
         </ul>
 
-        <h4>✅ Final Takeaway</h4>
+        <h4> Final Takeaway</h4>
         <ul>
             <li>The dataset is <b>clean, consistent, and enterprise-grade</b>.</li>
             <li>Clear demand drivers and inefficiencies are observable across multiple dimensions.</li>
