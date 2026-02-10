@@ -2007,7 +2007,8 @@ elif eda_option == "Product-Level Analysis":
         )
     # ================= THEME COLORS (DEFINE ONCE) =================
     GREEN_BG = "#00D05E"
-    GRID_GREEN = "#009E4A"
+    GRID_GREEN = "#3B3B3B"
+
     BAR_BLUE = "#001F5C"
 
 
@@ -2315,7 +2316,7 @@ elif eda_option == "Customer-Level Analysis":
         )
     # ================= THEME COLORS (DEFINE ONCE) =================
     GREEN_BG = "#00D05E"
-    GRID_GREEN = "#009E4A"
+    GRID_GREEN = "#3B3B3B"
     BAR_BLUE = "#001F5C"
 
     # =========================================================
@@ -2683,7 +2684,8 @@ elif eda_option == "Store-Level Analysis":
     )
     # ================= THEME COLORS (DEFINE ONCE) =================
     GREEN_BG = "#00D05E"
-    GRID_GREEN = "#009E4A"
+    GRID_GREEN = "#3B3B3B"
+
     BAR_BLUE = "#001F5C"
 
     # =========================================================
@@ -2992,7 +2994,8 @@ elif eda_option == "Sales Channel Analysis":
     )
     # ================= THEME COLORS (DEFINE ONCE) =================
     GREEN_BG = "#00D05E"
-    GRID_GREEN = "#009E4A"
+    GRID_GREEN = "#3B3B3B"
+
     BAR_BLUE = "#001F5C"
 
     # =========================================================
@@ -3197,7 +3200,7 @@ elif eda_option == "Sales Channel Analysis":
             channel_finance["total_profit"],
             width,
             label="Total Profit",
-            color="#10B981"
+            color="#0A6849"
         )
 
         ax4.set_xticks(x)
@@ -3325,7 +3328,8 @@ elif eda_option == "Promotion Effectiveness":
     )
     # ================= THEME COLORS (DEFINE ONCE) =================
     GREEN_BG = "#00D05E"
-    GRID_GREEN = "#009E4A"
+    GRID_GREEN = "#3B3B3B"
+
     BAR_BLUE = "#001F5C"
 
     # =========================================================
@@ -3663,7 +3667,8 @@ elif eda_option == "Event Impact Analysis":
     )
     # ================= THEME COLORS (DEFINE ONCE) =================
     GREEN_BG = "#00D05E"
-    GRID_GREEN = "#009E4A"
+    GRID_GREEN = "#3B3B3B"
+
     BAR_BLUE = "#001F5C"
 
     # =========================================================
