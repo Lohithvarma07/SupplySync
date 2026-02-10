@@ -6,3 +6,4 @@ seaborn
 scikit-learn
 mysql-connector-python
 streamlit-aggrid
+altair
